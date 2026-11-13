@@ -4,9 +4,9 @@
 
 export const RARITY = [
   { key: 'common',    name: '일반', color: '#a7adb4', mul: 1.00 },
-  { key: 'rare',      name: '희귀', color: '#5fb4ff', mul: 1.08 },
-  { key: 'epic',      name: '영웅', color: '#c27bff', mul: 1.16 },
-  { key: 'legendary', name: '전설', color: '#ffa733', mul: 1.26 },
+  { key: 'rare',      name: '희귀', color: '#5fb4ff', mul: 1.05 },
+  { key: 'epic',      name: '영웅', color: '#c27bff', mul: 1.10 },
+  { key: 'legendary', name: '전설', color: '#ffa733', mul: 1.15 },
 ];
 
 export const PRIMARY = {
@@ -17,7 +17,7 @@ export const PRIMARY = {
   },
   splitter: {
     name: '스플리터', desc: '한 번에 탄 3발을 부채꼴로 쏩니다. 가까이 붙어서 쏠수록 강합니다.',
-    rate: 6, damage: 11, recoil: 150, heat: 0.05, spread: 0.12,
+    rate: 6, damage: 9, recoil: 150, heat: 0.05, spread: 0.12,
     speed: 2000, stagger: 0.8, bullets: 3, size: 3,
   },
   rifle: {
@@ -37,8 +37,8 @@ export const PRIMARY = {
   },
   lance: {
     name: '레일 랜스', desc: '즉시 관통하는 광선. 한 발마다 몸이 크게 밀립니다.',
-    rate: 1.6, damage: 260, recoil: 640, heat: 0.18, spread: 0,
-    speed: 0, stagger: 9, bullets: 1, size: 0, hitscan: true,
+    rate: 1.6, damage: 150, recoil: 640, heat: 0.18, spread: 0,
+    speed: 0, stagger: 5, bullets: 1, size: 0, hitscan: true,
   },
 };
 
@@ -65,8 +65,8 @@ export const ALT = {
   slug: {
     name: '슬러그 캐논', desc: '단발 대구경. 한 방에 아주 멀리 날아가고 그로기 게이지를 크게 채웁니다.',
     mode: 'blast', move: '한 방 장거리 점프',
-    pellets: 1, damage: 120, recoil: 1250, shells: 1, spread: 0,
-    speed: 2300, life: 0.9, stagger: 14,
+    pellets: 1, damage: 90, recoil: 1250, shells: 1, spread: 0,
+    speed: 2300, life: 0.9, stagger: 9,
   },
   jet: {
     name: '분사기', desc: '누르고 있는 동안 조준 반대 방향으로 계속 분사해 공중에 떠 있을 수 있습니다. 가까이 있는 적을 불꽃으로 태웁니다. 바닥에 닿으면 연료가 찹니다.',
@@ -77,7 +77,7 @@ export const ALT = {
   flak: {
     name: '플랙 버스터', desc: '사거리가 짧은 대신 근접에서 엄청난 피해가 들어갑니다.',
     mode: 'blast', move: '반동 점프',
-    pellets: 11, damage: 15, recoil: 1150, shells: 2, spread: 0.34,
+    pellets: 11, damage: 10, recoil: 1150, shells: 2, spread: 0.34,
     speed: 1500, life: 0.22, stagger: 1.6,
   },
   blink: {

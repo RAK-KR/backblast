@@ -31,7 +31,8 @@ export const PLAYER = {
 // 모든 보스 공통 규칙 (보스별 수치는 bosses.js)
 export const BOSS = {
   groggyTime: 6.0,
-  groggyDamageMul: 2.0,   // 그로기 중 받는 피해 배율
+  groggyDamageMul: 1.6,   // 그로기 중 받는 피해 배율
+  groggyCooldown: 8,      // 그로기가 끝난 뒤 이 시간 동안은 그로기 게이지가 차지 않음 (패턴을 볼 시간)
   groggyRecoilMul: 0.3,   // 그로기 중 주무기 반동 배율 (산탄 반동은 그대로)
 };
 
@@ -44,9 +45,9 @@ export const DROP = {
 // 극딜 스킬 (궁극기)
 export const ULT = {
   duration: 5,       // 지속 시간(초)
-  fillRatio: 0.2,    // 보스 최대 체력의 이 비율만큼 피해를 주면 게이지가 가득 참
-  rateMul: 1.4,      // 극딜 중 연사 속도 배율
-  altCd: 0.11,       // 극딜 중 산탄 연사 간격
+  fillRatio: 0.3,    // 보스 최대 체력의 이 비율만큼 피해를 주면 게이지가 가득 참
+  rateMul: 1.15,     // 극딜 중 연사 속도 배율
+  altCd: 0.3,        // 극딜 중 보조무기 연사 간격 (탄수 제한은 없음)
 };
 
 export const DMG = {

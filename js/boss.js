@@ -38,6 +38,7 @@ export class Boss {
     this.open = 0;          // 그로기 연출 0~1
     this.groggyT = 0;
     this.groggyCount = 0;
+    this.staggerLock = 0;    // 그로기 후 게이지가 차지 않는 시간
     this.deadT = 0;
     this.eyeA = Math.PI;
     this.tx = this.x;
@@ -114,6 +115,7 @@ export class Boss {
     this.timer += dt;
     this.sinceHit += dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
+    this.staggerLock = Math.max(0, this.staggerLock - dt);
     const fast = this.phase === 2 ? 1.25 : 1;
     this.ringRot += dt * (this.groggy ? 0.2 : 0.6 * fast);
 
@@ -415,6 +417,7 @@ export class Boss {
     this.groggyT -= dt;
     if (this.groggyT <= 0) {
       this.stagger = 0;
+      if (!this.def.noRiseShock) this.staggerLock = BOSS.groggyCooldown;
       this.staggerMax = this.def.staggerMax * (1 + this.groggyCount * 0.25);
       if (!this.def.noRiseShock) {
         this.push(game, shock(this.x - this.r * 0.6, -1, 640));
@@ -460,7 +463,7 @@ export class Boss {
     this.hp -= d;
     this.sinceHit = 0;
     this.hitFlash = 0.05;
-    if (!this.groggy && !forcePhase) this.stagger += stagger;
+    if (!this.groggy && !forcePhase && this.staggerLock <= 0) this.stagger += stagger;
     if (d > 0) game.onBossDamage(d, hx, hy, this.groggy);
 
     if (forcePhase) {

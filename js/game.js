@@ -141,7 +141,7 @@ export class Game {
     const b = this.boss;
     if (!b.hidden && Math.hypot(b.x - m.x, b.y - m.y) < 95 + b.r) {
       // 기뢰를 보스 근처에서 터뜨리면 큰 피해 + 그로기
-      b.takeDamage(byPlayer ? 340 : 200, 16, m.x, m.y, this);
+      b.takeDamage(byPlayer ? 200 : 120, 10, m.x, m.y, this);
     }
     // 연쇄 폭발
     for (const h of this.hazards) {
@@ -763,13 +763,14 @@ export class Game {
       g.fillStyle = '#ffe08c';
       g.fillText(b.groggyT > 100 ? 'GROGGY' : `GROGGY ${b.groggyT.toFixed(1)}s`, bx, sy + 22);
     } else {
-      const k = Math.min(1, b.stagger / b.staggerMax);
-      g.fillStyle = '#c9a35a';
+      const locked = b.staggerLock > 0;
+      const k = locked ? 1 - b.staggerLock / BOSS.groggyCooldown : Math.min(1, b.stagger / b.staggerMax);
+      g.fillStyle = locked ? 'rgba(140,120,140,0.6)' : '#c9a35a';
       g.fillRect(bx, sy, bw * k, 7);
       g.textAlign = 'left';
       g.font = font(600, 13);
-      g.fillStyle = '#8f8a80';
-      g.fillText('그로기', bx, sy + 22);
+      g.fillStyle = locked ? '#a89aa4' : '#8f8a80';
+      g.fillText(locked ? `그로기 회복 중 ${b.staggerLock.toFixed(1)}s` : '그로기', bx, sy + 22);
     }
     g.textAlign = 'right';
     g.font = font(600, 14);
