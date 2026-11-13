@@ -168,11 +168,23 @@ const STEPS = [
   },
   {
     title: '극딜 스킬',
-    text: ['보스를 때리면 오른쪽 아래 극딜 게이지가 찹니다. 가득 차면 F키로 5초 동안 극딜합니다.', '극딜 중에는 반동이 없고 과열·탄수 제한도 없습니다. 그로기 때 가까이 붙어서 쓰세요. 지금 F키를 눌러 보세요.'],
-    setup(game, tu) { game.ult = 100; tu.used = false; },
+    text: ['과녁이 그로기로 바닥에 쓰러졌습니다. 극딜 게이지(오른쪽 아래)가 가득 찼습니다.', '과녁 가까이 붙은 뒤 F키를 누르고, 5초 동안 반동 없이 몰아서 쏘세요.'],
+    setup(game, tu) {
+      game.ult = 100;
+      tu.used = false;
+      const b = game.boss;
+      // 극딜을 다 쓸 때까지 쓰러진 상태 유지
+      if (!b.groggy) b.enterGroggy(game);
+      b.groggyT = 999;
+      b.groggyMax = 999;
+    },
     update(game, tu) {
       if (game.ultT > 0) tu.used = true;
-      return tu.used && game.ultT <= 0;
+      if (tu.used && game.ultT <= 0) {
+        game.boss.groggyT = 0.6; // 극딜이 끝나면 일어남
+        return true;
+      }
+      return false;
     },
     bar: (game, tu) => (tu.used ? 1 - game.ultT / 5 : 0),
   },

@@ -550,7 +550,7 @@ export class Game {
       g.textAlign = 'left';
       g.font = font(700, 13);
       g.fillStyle = '#ffe08c';
-      g.fillText(`GROGGY ${b.groggyT.toFixed(1)}s`, bx, sy + 22);
+      g.fillText(b.groggyT > 100 ? 'GROGGY' : `GROGGY ${b.groggyT.toFixed(1)}s`, bx, sy + 22);
     } else {
       const k = Math.min(1, b.stagger / b.staggerMax);
       g.fillStyle = '#c9a35a';

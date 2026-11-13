@@ -446,5 +446,42 @@ export class Boss {
   draw(g, t) {
     if (this.hidden) return;
     ART[this.def.art](this, g, t);
+    if (this.groggy) this.drawDizzy(g, t);
+  }
+
+  // 그로기: 머리 위에서 빙빙 도는 별
+  drawDizzy(g, t) {
+    const cx = this.x;
+    const cy = this.y - this.r - 34;
+    const n = 5;
+    const fade = Math.min(1, this.open * 1.5);
+    for (let i = 0; i < n; i++) {
+      const a = t * 4 + (i / n) * Math.PI * 2;
+      const z = Math.sin(a);              // 앞(+) / 뒤(-)
+      const sx = cx + Math.cos(a) * 64;
+      const sy = cy + z * 16;
+      const size = (z > 0 ? 14 : 9) * (0.9 + 0.1 * Math.sin(t * 10 + i));
+      g.save();
+      g.translate(sx, sy);
+      g.rotate(t * 6 + i);
+      g.globalAlpha = fade * (z > 0 ? 1 : 0.5);
+      if (z > 0) {
+        g.globalCompositeOperation = 'lighter';
+        g.fillStyle = 'rgba(255,224,138,0.35)';
+        g.beginPath(); g.arc(0, 0, size * 1.6, 0, Math.PI * 2); g.fill();
+        g.globalCompositeOperation = 'source-over';
+      }
+      g.fillStyle = z > 0 ? '#ffe9a8' : '#c9a35a';
+      g.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 === 0 ? size : size * 0.42;
+        const ang = (k / 10) * Math.PI * 2 - Math.PI / 2;
+        g.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
+      }
+      g.closePath();
+      g.fill();
+      g.restore();
+    }
+    g.globalAlpha = 1;
   }
 }
