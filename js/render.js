@@ -14,7 +14,7 @@ function seeded(seed) {
   return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
 }
 
-export const SUN = { x: 1040, y: 560, r: 130 };
+export const SUN = { x: 1040, y: 500, r: 130 };
 
 export function buildBackground() {
   const c = makeCanvas();
@@ -49,7 +49,7 @@ export function buildBackground() {
   g.beginPath(); g.arc(SUN.x, SUN.y, SUN.r, 0, Math.PI * 2); g.fill();
   // 해를 가로지르는 구름 띠
   g.fillStyle = 'rgba(122,38,56,0.55)';
-  for (const [yy, hh, ww] of [[520, 6, 520], [575, 10, 640], [640, 8, 460], [470, 4, 300]]) {
+  for (const [yy, hh, ww] of [[460, 6, 520], [515, 10, 640], [580, 8, 460], [410, 4, 300]]) {
     g.fillRect(SUN.x - ww / 2 + (rnd() - 0.5) * 120, yy, ww, hh);
   }
 
@@ -226,6 +226,23 @@ function floor(g, rnd) {
     g.beginPath();
     g.moveTo(dx, by - 5); g.lineTo(dx + 5, by); g.lineTo(dx, by + 5); g.lineTo(dx - 5, by); g.closePath();
     g.fill();
+  }
+
+  // 아래쪽 기단 (큰 석재 블록)
+  for (let row = 0; row < 3; row++) {
+    const ry = top + 66 + row * 34;
+    if (ry > H) break;
+    g.fillStyle = 'rgba(0,0,0,0.45)';
+    g.fillRect(ARENA.left, ry, ARENA.right - ARENA.left, 2);
+    let bx = ARENA.left + (row % 2) * 70;
+    while (bx < ARENA.right) {
+      const bw = 140 + Math.floor(rnd() * 60);
+      g.fillStyle = 'rgba(0,0,0,0.4)';
+      g.fillRect(bx, ry, 2, 34);
+      g.fillStyle = `rgba(255,220,200,${0.012 + rnd() * 0.02})`;
+      g.fillRect(bx + 2, ry + 3, bw - 4, 28);
+      bx += bw;
+    }
   }
 
   // 윗면 테두리 (석양 반사)

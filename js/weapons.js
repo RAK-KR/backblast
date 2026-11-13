@@ -96,14 +96,21 @@ function pickWeighted(weights) {
   return weights.length - 1;
 }
 
-export function rollDrops(grade) {
+// tier: 보스 단계 (0=1단계, 1=2단계, 2=최종). 앞 단계일수록 높은 등급이 덜 나옴
+const TIER_SCALE = [[1, 0.8, 0.35, 0.15], [1, 1, 0.65, 0.45], [1, 1, 1, 1]];
+
+export function rollDrops(grade, tier = 2) {
   const count = grade === 'S' ? 2 : 1;
   const drops = [];
   for (let i = 0; i < count; i++) {
     const slot = Math.random() < 0.5 ? 'primary' : 'alt';
     const pool = Object.keys(slot === 'primary' ? PRIMARY : ALT);
     const id = pool[Math.floor(Math.random() * pool.length)];
-    const rarity = pickWeighted(RARITY_TABLE[grade] || RARITY_TABLE.C);
+    const base = RARITY_TABLE[grade] || RARITY_TABLE.C;
+    const sc = TIER_SCALE[tier] || TIER_SCALE[2];
+    const wts = base.map((w, j) => w * sc[j]);
+    const sum = wts.reduce((a, b) => a + b, 0);
+    const rarity = pickWeighted(wts.map((w) => w / sum));
     const quality = 0.94 + Math.random() * 0.12;
     drops.push(makeWeapon(slot, id, rarity, quality));
   }

@@ -66,8 +66,9 @@ export function updateHazard(h, dt, game) {
         h.vx += Math.cos(a) * 140 * dt;
         h.vy += Math.sin(a) * 140 * dt;
         const sp = Math.hypot(h.vx, h.vy);
-        if (sp > 110) { h.vx *= 110 / sp; h.vy *= 110 / sp; }
-        if (Math.hypot(p.x - h.x, p.y - h.y) < 70) h.fuse = 0.35;
+        const cap = 110 * (h.slow || 1);
+        if (sp > cap) { h.vx *= cap / sp; h.vy *= cap / sp; }
+        if (Math.hypot(p.x - h.x, p.y - h.y) < 70) h.fuse = 0.5;
       }
       h.x += h.vx * dt;
       h.y += h.vy * dt;

@@ -1,6 +1,7 @@
 // 메뉴 화면 (타이틀 / 장비 / 일시정지 / 결과·드랍)
 import { RARITY, weaponDef, weaponMul } from './weapons.js';
 import { formatTime } from './game.js';
+import { BOSSES } from './bosses.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -70,15 +71,18 @@ function weaponCard(w, opts = {}) {
 export class UI {
   constructor(handlers) {
     this.h = handlers;
-    this.screens = ['title', 'loadout', 'pause', 'result', 'help'];
+    this.screens = ['title', 'loadout', 'pause', 'result', 'help', 'stages'];
     this.loadoutReturn = 'title';
 
-    $('#btn-start').onclick = () => { this.h.sfx(); this.h.start(); };
+    $('#btn-start').onclick = () => { this.h.sfx(); this.openStages(); };
+    $('#btn-stages-back').onclick = () => { this.h.sfx(); this.show('title'); };
+    $('#btn-stages-loadout').onclick = () => { this.h.sfx(); this.openLoadout('stages'); };
+    $('#btn-next').onclick = () => { this.h.sfx(); this.h.next(); };
     $('#btn-loadout').onclick = () => { this.h.sfx(); this.openLoadout('title'); };
     $('#btn-help').onclick = () => { this.h.sfx(); this.show('help'); };
     $('#btn-help-back').onclick = () => { this.h.sfx(); this.show('title'); };
     $('#btn-loadout-back').onclick = () => { this.h.sfx(); this.show(this.loadoutReturn); };
-    $('#btn-loadout-start').onclick = () => { this.h.sfx(); this.h.start(); };
+    $('#btn-loadout-start').onclick = () => { this.h.sfx(); this.openStages(); };
     $('#btn-resume').onclick = () => { this.h.sfx(); this.h.resume(); };
     $('#btn-restart').onclick = () => { this.h.sfx(); this.h.start(); };
     $('#btn-quit').onclick = () => { this.h.sfx(); this.h.toTitle(); };
@@ -96,6 +100,14 @@ export class UI {
         this.h.setVolume(v);
       };
     }
+    for (const id of ['#sens-title', '#sens-pause']) {
+      const s = $(id);
+      s.oninput = () => {
+        $('#sens-title').value = s.value;
+        $('#sens-pause').value = s.value;
+        this.h.setSens(Number(s.value) / 100);
+      };
+    }
     for (const id of ['#shake-title', '#shake-pause']) {
       const c = $(id);
       c.onchange = () => {
@@ -110,6 +122,9 @@ export class UI {
     const v = Math.round(settings.volume * 100);
     $('#vol-title').value = v;
     $('#vol-pause').value = v;
+    const sv = Math.round((settings.sens || 1) * 100);
+    $('#sens-title').value = sv;
+    $('#sens-pause').value = sv;
     $('#shake-title').checked = settings.shake > 0;
     $('#shake-pause').checked = settings.shake > 0;
   }
@@ -122,8 +137,42 @@ export class UI {
   hideAll() { this.show(null); }
 
   updateTitle(save) {
-    const best = save.best;
-    $('#title-best').textContent = best ? `최고 기록 ${formatTime(best.time)} · ${best.grade} 등급 · 처치 ${save.clears}회` : '아직 처치 기록이 없습니다';
+    const n = BOSSES.filter((b) => save.cleared[b.id]).length;
+    $('#title-best').textContent = n ? `처치한 보스 ${n} / ${BOSSES.length} · 총 처치 ${save.clears}회` : '아직 처치한 보스가 없습니다';
+  }
+
+  openStages() {
+    const save = this.h.getSave();
+    const list = $('#stage-list');
+    list.innerHTML = '';
+    // 튜토리얼
+    const tut = el('div', 'stage tutorial');
+    if (!save.tutorialDone) tut.classList.add('recommend');
+    tut.innerHTML = `<div class="no">TUTORIAL</div><div class="name">기초 훈련</div><div class="sub">조작과 회피 익히기</div>
+      <div class="desc">조준, 연사, 산탄 점프, 좌우 이동, 낙하 늦추기, 충격파·레이저·탄환·기뢰 피하기, 그로기와 극딜까지 단계별로 직접 해 봅니다. 맞아도 체력이 줄지 않습니다.</div>
+      <div class="rec ${save.tutorialDone ? '' : 'none'}">${save.tutorialDone ? '완료함' : '아직 하지 않음'}</div>`;
+    tut.onclick = () => { this.h.sfx(); this.h.startStage(-1); };
+    list.append(tut);
+
+    BOSSES.forEach((b, i) => {
+      const unlocked = i === 0 || !!save.cleared[BOSSES[i - 1].id];
+      const rec = save.records[b.id];
+      const card = el('div', 'stage');
+      const stars = '◆'.repeat(b.stars) + `<i>${'◆'.repeat(3 - b.stars)}</i>`;
+      card.innerHTML = `<div class="no">${i === BOSSES.length - 1 ? 'FINAL' : `STAGE ${i + 1}`}</div>
+        <div class="name">${b.name}</div><div class="sub">${b.title}</div>
+        <div class="stars">${stars}</div>
+        <div class="desc">${b.desc}</div>
+        <div class="rec ${rec ? '' : 'none'}">${rec ? `최고 ${formatTime(rec.time)} · ${rec.grade} 등급` : '기록 없음'}</div>`;
+      if (!unlocked) {
+        card.classList.add('locked');
+        card.append(el('div', 'lock', `${BOSSES[i - 1].name}을(를) 처치하면 열립니다`));
+      } else {
+        card.onclick = () => { this.h.sfx(); this.h.startStage(i); };
+      }
+      list.append(card);
+    });
+    this.show('stages');
   }
 
   openLoadout(from) {
@@ -167,7 +216,9 @@ export class UI {
 
   showPause() { this.show('pause'); }
 
-  showResult(win, stats, grade, drops, isBest) {
+  showResult(win, stats, grade, drops, isBest, hasNext) {
+    $('#btn-next').style.display = win && hasNext ? '' : 'none';
+    $('#btn-retry').classList.toggle('primary', !(win && hasNext));
     $('#result-title').textContent = win ? '처치 성공' : '패배';
     $('#result-title').className = win ? 'win' : 'lose';
     const gradeEl = $('#result-grade');

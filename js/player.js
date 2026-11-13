@@ -1,5 +1,5 @@
 // 플레이어: 걷기·점프 없이 총 반동으로만 이동합니다.
-import { ARENA, PHYS, PLAYER } from './config.js';
+import { ARENA, PHYS, PLAYER, ULT } from './config.js';
 import { weaponDef, weaponMul } from './weapons.js';
 
 export class Player {
@@ -35,6 +35,7 @@ export class Player {
     this.dead = false;
     this.scarf = Array.from({ length: 6 }, () => ({ x: this.x, y: this.y }));
     this.squash = 0;
+    this.ultActive = false;
   }
 
   get alive() { return !this.dead; }
@@ -58,7 +59,8 @@ export class Player {
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.squash = Math.max(0, this.squash - dt * 4);
 
-    // 과열 처리
+    // 과열 처리 (극딜 중에는 과열 없음)
+    if (this.ultActive) { this.heat = 0; this.overheat = false; }
     if (this.overheat) {
       this.heat -= PLAYER.overheatCool * dt;
       if (this.heat <= 0) { this.heat = 0; this.overheat = false; }
@@ -76,7 +78,7 @@ export class Player {
       // 좌클릭: 연사
       if (input.left && !this.overheat && this.fireCd <= 0) {
         const p = this.pDef;
-        this.fireCd += 1 / p.rate;
+        this.fireCd += 1 / (p.rate * (this.ultActive ? ULT.rateMul : 1));
         if (this.fireCd < 0) this.fireCd = 0;
         this.heat += p.heat * heatMul;
         if (this.heat >= 1) { this.heat = 1; this.overheat = true; }
@@ -98,9 +100,9 @@ export class Player {
       // 우클릭: 산탄 (이동 핵심)
       if (altPressed && this.altCd <= 0) {
         const a2 = this.aDef;
-        if (this.shells > 0) {
-          this.shells--;
-          this.altCd = 0.16;
+        if (this.shells > 0 || this.ultActive) {
+          if (!this.ultActive) this.shells--;
+          this.altCd = this.ultActive ? ULT.altCd : 0.16;
           const mp = this.muzzlePos();
           for (let i = 0; i < a2.pellets; i++) {
             const spread = a2.pellets === 1 ? 0 : (i / (a2.pellets - 1) - 0.5) * a2.spread * 2 + (Math.random() - 0.5) * 0.05;

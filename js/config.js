@@ -6,7 +6,7 @@ export const ARENA = {
   left: 40,
   right: W - 40,
   top: 40,
-  floor: H - 90,
+  floor: H - 170,   // 바닥 아래 공간을 넉넉히 두어 아래 조준이 편하도록
 };
 
 export const PHYS = {
@@ -21,28 +21,32 @@ export const PHYS = {
 export const PLAYER = {
   radius: 18,
   maxHp: 100,
-  iframes: 0.8,
+  iframes: 1.0,
   shellRefillGround: 0.22, // 바닥에 닿고 이 시간 뒤 산탄 전부 충전
-  shellRefillAir: 2.4,     // 공중에서 산탄 1발 자연 충전 시간
+  shellRefillAir: 1.8,     // 공중에서 산탄 1발 자연 충전 시간
   heatCool: 0.55,          // 초당 냉각량
   overheatCool: 0.42,      // 과열 상태 냉각량
 };
 
+// 모든 보스 공통 규칙 (보스별 수치는 bosses.js)
 export const BOSS = {
-  maxHp: 16000,
-  radius: 86,
-  staggerMax: 100,
   groggyTime: 6.0,
   groggyDamageMul: 2.0,   // 그로기 중 받는 피해 배율
   groggyRecoilMul: 0.3,   // 그로기 중 플레이어 반동 배율 (극딜 구간)
-  phase2At: 0.5,
-  contactDamage: 15,
+};
+
+// 극딜 스킬 (궁극기)
+export const ULT = {
+  duration: 5,       // 지속 시간(초)
+  fillRatio: 0.2,    // 보스 최대 체력의 이 비율만큼 피해를 주면 게이지가 가득 참
+  rateMul: 1.4,      // 극딜 중 연사 속도 배율
+  altCd: 0.11,       // 극딜 중 산탄 연사 간격
 };
 
 export const DMG = {
-  laser: 24,
-  shock: 20,
-  orb: 10,
-  mine: 22,
-  charge: 26,
+  laser: 18,
+  shock: 15,
+  orb: 8,
+  mine: 16,
+  charge: 20,
 };

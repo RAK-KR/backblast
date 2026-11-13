@@ -20,14 +20,27 @@
         <div class="logo">BACKBLAST</div>
         <div class="logo-sub">반동으로만 움직이는 보스전</div>
         <div class="menu">
-          <button id="btn-start" class="btn primary">전투 시작</button>
+          <button id="btn-start" class="btn primary">시작</button>
           <button id="btn-loadout" class="btn">장비</button>
           <button id="btn-help" class="btn">조작법</button>
         </div>
         <div id="title-best" class="best"></div>
         <div class="settings">
           <label>음량 <input id="vol-title" type="range" min="0" max="100"></label>
+          <label>마우스 감도 <input id="sens-title" type="range" min="30" max="200"></label>
           <label class="check"><input id="shake-title" type="checkbox"> 화면 흔들림</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 스테이지 선택 -->
+    <section id="stages" class="screen hidden">
+      <div class="panel wide">
+        <h2>스테이지</h2>
+        <div id="stage-list" class="stage-list"></div>
+        <div class="row">
+          <button id="btn-stages-back" class="btn">돌아가기</button>
+          <button id="btn-stages-loadout" class="btn">장비</button>
         </div>
       </div>
     </section>
@@ -40,18 +53,21 @@
           <div><b>마우스</b><span>조준</span></div>
           <div><b>좌클릭 (누르고 있기)</b><span>주무기 연사 · 작은 반동</span></div>
           <div><b>우클릭 / Space</b><span>산탄 발사 · 쏜 반대 방향으로 크게 튕겨 나감</span></div>
+          <div><b>F</b><span>극딜 스킬 · 게이지가 가득 차면 5초 동안 반동 없이 무제한 사격</span></div>
           <div><b>R</b><span>즉시 재시작</span></div>
           <div><b>Esc</b><span>일시정지</span></div>
         </div>
         <h3>규칙</h3>
         <ul class="rules">
+          <li>처음이라면 스테이지 화면의 튜토리얼부터 해 보세요.</li>
           <li>걷기와 점프가 없습니다. 총을 쏜 반동으로만 움직입니다.</li>
           <li>산탄은 바닥에 닿으면 전부 충전되고, 공중에서는 천천히 1발씩 충전됩니다.</li>
           <li>주무기는 계속 쏘면 과열됩니다. 아래로 쏘면 낙하 속도를 늦출 수 있습니다.</li>
           <li>보스를 때리면 그로기 게이지가 찹니다. 산탄과 묵직한 무기가 잘 채웁니다.</li>
           <li>그로기 중에는 받는 피해가 2배가 되고, 내 반동이 크게 줄어 자리를 지키며 극딜할 수 있습니다.</li>
           <li>기뢰는 쏘면 터집니다. 보스 근처에서 터뜨리면 큰 피해와 그로기가 들어갑니다.</li>
-          <li>보스를 잡으면 무기가 드랍됩니다. 빠르고 적게 맞을수록 좋은 등급이 나옵니다.</li>
+          <li>보스를 잡으면 무기가 드랍됩니다. 빠르고 적게 맞을수록, 뒤 단계 보스일수록 좋은 등급이 나옵니다.</li>
+          <li>전투 중에는 마우스 커서가 화면에 고정됩니다. Esc를 누르면 풀리고 일시정지됩니다.</li>
         </ul>
         <div class="row">
           <button id="btn-help-back" class="btn">돌아가기</button>
@@ -75,7 +91,7 @@
         </div>
         <div class="row">
           <button id="btn-loadout-back" class="btn">돌아가기</button>
-          <button id="btn-loadout-start" class="btn primary">전투 시작</button>
+          <button id="btn-loadout-start" class="btn primary">스테이지 선택</button>
         </div>
       </div>
     </section>
@@ -91,6 +107,7 @@
         </div>
         <div class="settings">
           <label>음량 <input id="vol-pause" type="range" min="0" max="100"></label>
+          <label>마우스 감도 <input id="sens-pause" type="range" min="30" max="200"></label>
           <label class="check"><input id="shake-pause" type="checkbox"> 화면 흔들림</label>
         </div>
       </div>
@@ -112,7 +129,8 @@
         <div class="row">
           <button id="btn-result-title" class="btn">타이틀로</button>
           <button id="btn-result-loadout" class="btn">장비</button>
-          <button id="btn-retry" class="btn primary">다시 도전</button>
+          <button id="btn-retry" class="btn">다시 도전</button>
+          <button id="btn-next" class="btn primary">다음 보스</button>
         </div>
       </div>
     </section>

@@ -182,5 +182,32 @@ h3 small { font-family: var(--body); font-size: 12px; color: var(--dim); letter-
 .wcard.reveal { animation: reveal 0.45s cubic-bezier(.2, 1.4, .4, 1); box-shadow: 0 0 40px -14px var(--rc); }
 @keyframes reveal { 0% { transform: scale(0.82) rotateY(70deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
 
+/* ── 스테이지 선택 ── */
+.stage-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+.stage {
+  position: relative; min-height: 300px; padding: 22px 20px 20px;
+  background: linear-gradient(170deg, rgba(48, 18, 42, 0.92), rgba(14, 4, 14, 0.96));
+  border: 1px solid var(--line); cursor: pointer;
+  display: flex; flex-direction: column; transition: transform 0.12s, border-color 0.12s;
+}
+.stage:hover { transform: translateY(-3px); border-color: var(--gold-hi); }
+.stage .no { font-family: var(--display); font-size: 13px; letter-spacing: 3px; color: var(--gold); }
+.stage .name { font-family: "Noto Serif KR", serif; font-size: 26px; font-weight: 700; margin-top: 10px; }
+.stage .sub { font-size: 13px; color: var(--dim); margin-top: 2px; letter-spacing: 1px; }
+.stage .stars { margin-top: 14px; font-size: 14px; letter-spacing: 4px; color: var(--crimson-hi); }
+.stage .stars i { font-style: normal; color: rgba(255, 255, 255, 0.15); }
+.stage .desc { font-size: 13px; color: var(--dim); line-height: 1.65; margin-top: 12px; flex: 1; }
+.stage .rec { font-size: 13px; color: var(--gold-hi); margin-top: 14px; border-top: 1px solid rgba(201, 163, 90, 0.2); padding-top: 10px; }
+.stage .rec.none { color: var(--dim); }
+.stage.tutorial { border-left: 3px solid var(--gold-hi); }
+.stage.recommend::after {
+  content: "처음이라면 여기부터"; position: absolute; top: -11px; right: 14px;
+  font-size: 11px; letter-spacing: 1px; background: var(--gold-hi); color: var(--ink); padding: 3px 9px;
+}
+.stage.locked { cursor: default; }
+.stage.locked:hover { transform: none; border-color: var(--line); }
+.stage .lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  font-size: 14px; color: var(--bone); letter-spacing: 1px; background: rgba(8, 2, 10, 0.82); padding: 20px; }
+
 /* 메뉴 표시 중엔 화면 클릭이 캔버스로 안 가게 */
 body:not(.in-menu) .screen { pointer-events: none; }

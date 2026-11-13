@@ -1,0 +1,103 @@
+// 보스 정의. 순서대로 점점 어려워집니다.
+// p1/p2: 페이즈별 패턴 목록과 수치. dmgMul: 이 보스가 주는 모든 피해 배율.
+
+export const BOSSES = [
+  {
+    id: 'bell',
+    name: '울림종',
+    title: '첫 번째 시련',
+    desc: '느리고 단순한 보스. 충격파 넘기와 탄환 피하기를 익히세요.',
+    stars: 1,
+    art: 'bell',
+    r: 78,
+    maxHp: 4000,
+    staggerMax: 45,
+    contact: 6,
+    dmgMul: 0.6,
+    phase2At: null,   // 1·2단계는 페이즈 변화 없음
+    gradeTimes: [40, 60, 90],
+    tier: 0,
+    p1: {
+      rest: 1.7,
+      pool: ['slam', 'radial', 'slam', 'radial'],
+      slam: { track: 1.4, tele: 0.6, shock: 460, repeats: 1 },
+      radial: { waves: 1, n: 10, speed: 210, gap: 0.5 },
+    },
+  },
+  {
+    id: 'brazier',
+    name: '불씨 화로',
+    title: '두 번째 시련',
+    desc: '레이저와 기뢰가 추가됩니다. 경고선을 보고 미리 피하세요.',
+    stars: 2,
+    art: 'brazier',
+    r: 82,
+    maxHp: 7000,
+    staggerMax: 60,
+    contact: 8,
+    dmgMul: 0.8,
+    phase2At: null,
+    gradeTimes: [55, 80, 115],
+    tier: 1,
+    p1: {
+      rest: 1.4,
+      pool: ['sweep', 'mines', 'radial', 'slam', 'sweep'],
+      sweep: { tele: 1.15, shots: [{ at: 0, v: false }], end: 1.9 },
+      mines: { n: 3 },
+      radial: { waves: 2, n: 10, speed: 240, gap: 0.45 },
+      slam: { track: 1.2, tele: 0.5, shock: 560, repeats: 1 },
+    },
+  },
+  {
+    id: 'warden',
+    name: '잿빛 수호자',
+    title: '최종 시련',
+    desc: '모든 패턴과 돌진을 쓰는 최종 보스. 2페이즈부터 폭주합니다.',
+    stars: 3,
+    art: 'warden',
+    r: 86,
+    maxHp: 11000,
+    staggerMax: 80,
+    contact: 10,
+    dmgMul: 1.0,
+    phase2At: 0.5,
+    gradeTimes: [70, 100, 140],
+    tier: 2,
+    p1: {
+      rest: 1.2,
+      pool: ['sweep', 'slam', 'radial', 'mines', 'sweep', 'radial'],
+      sweep: { tele: 1.05, shots: [{ at: 0, v: false }, { at: 0.95, v: false }], end: 2.4 },
+      slam: { track: 1.0, tele: 0.4, shock: 680, repeats: 1 },
+      radial: { waves: 3, n: 12, speed: 270, gap: 0.36 },
+      mines: { n: 4 },
+    },
+    p2: {
+      rest: 0.8,
+      pool: ['sweep', 'slam', 'radial', 'mines', 'charge', 'charge', 'slam'],
+      sweep: { tele: 0.85, shots: [{ at: 0, v: false }, { at: 0.95, v: false }, { at: 1.7, v: false }, { at: 1.7, v: true }], end: 2.9 },
+      slam: { track: 0.8, tele: 0.4, shock: 780, repeats: 2 },
+      radial: { waves: 4, n: 15, speed: 310, gap: 0.36 },
+      mines: { n: 6 },
+      charge: { tele: 0.95, burst: 12 },
+    },
+  },
+];
+
+// 튜토리얼용 허수아비 과녁 (공격하지 않음)
+export const DUMMY = {
+  id: 'dummy',
+  name: '연습용 과녁',
+  art: 'dummy',
+  r: 70,
+  maxHp: 999999,
+  staggerMax: 30,
+  contact: 0,
+  dmgMul: 0,
+  phase2At: null,
+  groggyTime: 5,
+  fixed: { x: 1150, y: 360 },
+  noRiseShock: true,
+  p1: { rest: 99, pool: [] },
+};
+
+export const bossById = (id) => BOSSES.find((b) => b.id === id);
