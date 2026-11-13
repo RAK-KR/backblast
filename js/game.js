@@ -529,6 +529,7 @@ export class Game {
       g.strokeRect(5, 5, W - 10, H - 10);
     }
 
+    this.drawLaserWarning(g, t);
     this.drawHud(g, t);
     this.drawBanners(g);
     if (this.state === 'play') this.drawCrosshair(g, t);
@@ -546,6 +547,38 @@ export class Game {
       g.fillStyle = `rgba(${this.fx.flashColor},${this.fx.flash * 0.5})`;
       g.fillRect(0, 0, W, H);
     }
+  }
+
+  // 레이저 경고 중: 화면 가운데에 반투명 경고 표시 (화면을 가리지 않게 작고 옅게)
+  drawLaserWarning(g, t) {
+    const warn = this.hazards.some((h) => (h.type === 'laserH' || h.type === 'laserV') && !h.fired && !h.dead);
+    if (!warn) { this.warnT = 0; return; }
+    this.warnT = (this.warnT || 0) + 1 / 60;
+    const pop = Math.min(1, this.warnT * 6);              // 처음 뜰 때 살짝 커지며 등장
+    const pulse = 0.5 + 0.5 * Math.sin(t * 14);
+    const cx = W / 2, cy = H * 0.42;
+    const s = 34 * (0.85 + 0.15 * pop);
+    g.save();
+    g.translate(cx, cy);
+    g.globalAlpha = 0.35 + 0.3 * pulse;
+    // 삼각형
+    g.beginPath();
+    g.moveTo(0, -s);
+    g.lineTo(s * 1.1, s * 0.85);
+    g.lineTo(-s * 1.1, s * 0.85);
+    g.closePath();
+    g.fillStyle = 'rgba(255,54,100,0.35)';
+    g.fill();
+    g.lineWidth = 4;
+    g.lineJoin = 'round';
+    g.strokeStyle = '#ff5a8a';
+    g.stroke();
+    // 느낌표
+    g.fillStyle = '#f3ece2';
+    g.fillRect(-3.5, -s * 0.45, 7, s * 0.75);
+    g.beginPath(); g.arc(0, s * 0.55, 4.5, 0, Math.PI * 2); g.fill();
+    g.restore();
+    g.globalAlpha = 1;
   }
 
   drawHook(g) {
