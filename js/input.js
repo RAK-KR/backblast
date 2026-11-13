@@ -14,6 +14,8 @@ export const input = {
 let canvasEl = null;
 let toLogical = (x, y) => ({ x, y });
 let sens = 1;
+const OVER = 300;       // 화면 밖으로 나갈 수 있는 거리
+const OVER_DOWN = 500;  // 아래쪽은 더 넉넉하게
 
 export function setMapper(fn) { toLogical = fn; }
 export function setSensitivity(v) { sens = v; }
@@ -37,8 +39,9 @@ export function initInput(canvas, onCanvasDown) {
     if (isLocked()) {
       const r = canvas.getBoundingClientRect();
       const k = (W / r.width) * sens;
-      input.mx = Math.max(0, Math.min(W, input.mx + e.movementX * k));
-      input.my = Math.max(0, Math.min(H, input.my + e.movementY * k));
+      // 고정 상태에서는 커서가 화면 밖까지 나갈 수 있음 (바닥에서 아래 조준이 편하도록)
+      input.mx = Math.max(-OVER, Math.min(W + OVER, input.mx + e.movementX * k));
+      input.my = Math.max(-OVER, Math.min(H + OVER_DOWN, input.my + e.movementY * k));
     } else {
       const p = toLogical(e.clientX, e.clientY);
       input.mx = Math.max(0, Math.min(W, p.x));
@@ -68,7 +71,7 @@ export function initInput(canvas, onCanvasDown) {
   window.addEventListener('keyup', (e) => input.keys.delete(e.code));
 }
 
-// 우클릭 대신 Space / Shift도 산탄으로 사용 가능
+// 보조무기: 우클릭 / Space / 왼쪽 Shift (모두 조준 방향)
 export function altPressed() {
   return input.rightPressed || input.pressed.has('Space') || input.pressed.has('ShiftLeft');
 }

@@ -20,7 +20,7 @@ const STEPS = [
   },
   {
     title: '산탄 점프',
-    text: ['우클릭(또는 Space)을 누르면 산탄이 나가고, 쏜 반대쪽으로 크게 튕겨 나갑니다.', '바로 아래를 조준하고 쏴서 점선 높이까지 뛰어오르세요.'],
+    text: ['우클릭(또는 Space)을 누르면 산탄이 나가고, 쏜 반대쪽으로 크게 튕겨 나갑니다.', '마우스를 발밑 아래로 내려 조준하고 쏴서 점선 높이까지 뛰어오르세요.'],
     setup(game, tu) { tu.lineY = ARENA.floor - 250; tu.arrow = true; },
     update: (game, tu) => game.player.y < tu.lineY,
   },
@@ -86,8 +86,8 @@ const STEPS = [
       const p = game.player;
       tu.spawnT -= dt;
       if (tu.spawnT <= 0) {
-        tu.spawnT = 2.6;
-        const h = laserH(clamp(p.y, ARENA.top + 40, ARENA.floor - 24), 1.15);
+        tu.spawnT = 3.0;
+        const h = laserH(clamp(p.y, ARENA.top + 40, ARENA.floor - 24), 1.5);
         h.tut = { counted: false, hit: false };
         game.hazards.push(h);
       }

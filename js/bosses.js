@@ -44,7 +44,7 @@ export const BOSSES = [
     p1: {
       rest: 1.4,
       pool: ['sweep', 'mines', 'radial', 'slam', 'sweep'],
-      sweep: { tele: 1.15, shots: [{ at: 0, v: false }], end: 1.9 },
+      sweep: { tele: 1.5, shots: [{ at: 0, v: false }], end: 2.3 },
       mines: { n: 3 },
       radial: { waves: 2, n: 10, speed: 240, gap: 0.45 },
       slam: { track: 1.2, tele: 0.5, shock: 560, repeats: 1 },
@@ -69,7 +69,7 @@ export const BOSSES = [
     p1: {
       rest: 1.2,
       pool: ['sweep', 'slam', 'radial', 'mines', 'sweep', 'radial'],
-      sweep: { tele: 1.05, shots: [{ at: 0, v: false }, { at: 0.95, v: false }], end: 2.4 },
+      sweep: { tele: 1.35, shots: [{ at: 0, v: false }, { at: 1.3, v: false }], end: 3.2 },
       slam: { track: 1.0, tele: 0.4, shock: 680, repeats: 1 },
       radial: { waves: 3, n: 12, speed: 270, gap: 0.36 },
       mines: { n: 4 },
@@ -77,7 +77,7 @@ export const BOSSES = [
     p2: {
       rest: 0.8,
       pool: ['sweep', 'slam', 'radial', 'mines', 'charge', 'charge', 'slam'],
-      sweep: { tele: 0.85, shots: [{ at: 0, v: false }, { at: 0.95, v: false }, { at: 1.7, v: false }, { at: 1.7, v: true }], end: 2.9 },
+      sweep: { tele: 1.15, shots: [{ at: 0, v: false }, { at: 1.2, v: false }, { at: 2.3, v: false }, { at: 2.3, v: true }], end: 3.9 },
       slam: { track: 0.8, tele: 0.4, shock: 780, repeats: 2 },
       radial: { waves: 4, n: 15, speed: 310, gap: 0.36 },
       mines: { n: 6 },

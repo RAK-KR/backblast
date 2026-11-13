@@ -4,7 +4,7 @@ import { Player } from './player.js';
 import { Boss } from './boss.js';
 import { FX } from './fx.js';
 import { updateHazard, hazardHits, drawHazard, blast } from './hazards.js';
-import { input, altPressed } from './input.js';
+import { input, altPressed, isLocked } from './input.js';
 import { buildBackground, buildVignette, Motes } from './render.js';
 import { weaponDef } from './weapons.js';
 import { BOSSES, DUMMY } from './bosses.js';
@@ -532,6 +532,15 @@ export class Game {
     this.drawHud(g, t);
     this.drawBanners(g);
     if (this.state === 'play') this.drawCrosshair(g, t);
+    // 마우스가 고정되지 않았을 때 안내
+    if (this.state === 'play' && !isLocked()) {
+      g.textAlign = 'center';
+      g.font = '500 15px "Noto Sans KR", sans-serif';
+      g.fillStyle = 'rgba(16,6,16,0.75)';
+      g.fillRect(W / 2 - 250, H - 60, 500, 30);
+      g.fillStyle = '#f0d08a';
+      g.fillText('화면을 클릭하면 마우스가 고정됩니다 (감도 설정 적용)', W / 2, H - 39);
+    }
 
     if (this.fx.flash > 0) {
       g.fillStyle = `rgba(${this.fx.flashColor},${this.fx.flash * 0.5})`;
@@ -582,7 +591,7 @@ export class Game {
 
     // 키 안내 (항상 오른쪽 위)
     g.font = '500 13px "Noto Sans KR", sans-serif';
-    const keys = [['좌클릭', '연사'], ['우클릭 / Space', '보조무기 (이동)'], ['F', '극딜 (게이지 가득)'], ['R', '재시작'], ['Esc', '일시정지']];
+    const keys = [['좌클릭', '연사'], ['우클릭 / Space', '보조무기 (조준 방향)'], ['F', '극딜 (게이지 가득)'], ['R', '재시작'], ['Esc', '일시정지']];
     let ky = this.mode === 'boss' ? 78 : 50;
     for (const [k, v] of keys) {
       g.fillStyle = 'rgba(16,6,16,0.55)';
@@ -789,8 +798,29 @@ export class Game {
 
   drawCrosshair(g, t) {
     const p = this.player;
-    const x = input.mx, y = input.my;
+    // 커서가 화면 밖에 있으면 가장자리에 표시하고 방향 화살표를 그림
+    const off = input.mx < 0 || input.mx > W || input.my < 0 || input.my > H;
+    const x = Math.max(14, Math.min(W - 14, input.mx));
+    const y = Math.max(14, Math.min(H - 50, input.my));
     const col = p.overheat ? '#ff4d7e' : '#f2ebde';
+    if (off) {
+      // 플레이어에서 실제 조준 방향으로 선
+      g.strokeStyle = 'rgba(242,235,222,0.35)';
+      g.lineWidth = 1.5;
+      g.setLineDash([4, 6]);
+      g.beginPath();
+      g.moveTo(p.x, p.y - 4);
+      g.lineTo(p.x + Math.cos(p.aim) * 220, p.y - 4 + Math.sin(p.aim) * 220);
+      g.stroke();
+      g.setLineDash([]);
+      const a = Math.atan2(input.my - y, input.mx - x);
+      g.save();
+      g.translate(x, y);
+      g.rotate(a);
+      g.fillStyle = col;
+      g.beginPath(); g.moveTo(26, 0); g.lineTo(16, -7); g.lineTo(16, 7); g.closePath(); g.fill();
+      g.restore();
+    }
     g.strokeStyle = col;
     g.lineWidth = 2;
     const gap = 7, len = 8;

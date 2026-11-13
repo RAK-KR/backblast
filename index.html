@@ -26,8 +26,8 @@
         </div>
         <div id="title-best" class="best"></div>
         <div class="settings">
-          <label>음량 <input id="vol-title" type="range" min="0" max="100"></label>
-          <label>마우스 감도 <input id="sens-title" type="range" min="30" max="200"></label>
+          <label><span>음량</span> <input id="vol-title" type="range" min="0" max="100"></label>
+          <label><span>마우스 감도</span> <input id="sens-title" type="range" min="20" max="300"> <b id="sens-title-v" class="sv">1.00</b></label>
           <label class="check"><input id="shake-title" type="checkbox"> 화면 흔들림</label>
         </div>
       </div>
@@ -52,7 +52,7 @@
         <div class="help-list">
           <div><b>마우스</b><span>조준</span></div>
           <div><b>좌클릭 (누르고 있기)</b><span>주무기 연사 · 작은 반동</span></div>
-          <div><b>우클릭 / Space</b><span>보조무기 · 이동 수단 (기본 산탄총은 쏜 반대 방향으로 튕겨 나감)</span></div>
+          <div><b>우클릭 / Space</b><span>보조무기 · 조준한 방향으로 발사 (기본 산탄총은 반대쪽으로 튕겨 나감)</span></div>
           <div><b>F</b><span>극딜 스킬 · 게이지가 가득 차면 5초 동안 반동 없이 무제한 사격</span></div>
           <div><b>R</b><span>즉시 재시작</span></div>
           <div><b>Esc</b><span>일시정지</span></div>
@@ -68,7 +68,8 @@
           <li>기뢰는 쏘면 터집니다. 보스 근처에서 터뜨리면 큰 피해와 그로기가 들어갑니다.</li>
           <li>보스마다 떨어뜨리는 전용 무기가 3종씩 있고, 보조무기는 종류마다 이동 방식이 다릅니다 (반동, 갈고리, 분사, 튕김 등).</li>
           <li>보스를 처음 잡으면 무기가 확정으로 나오고, 그다음부터는 등급에 따라 확률로 나옵니다. 이미 가진 무기는 더 높은 등급으로만 나옵니다.</li>
-          <li>전투 중에는 마우스 커서가 화면에 고정됩니다. Esc를 누르면 풀리고 일시정지됩니다.</li>
+          <li>전투 중에는 마우스 커서가 화면에 고정되어 밖으로 나가지 않습니다. 고정이 풀렸다면 화면을 한 번 클릭하세요. Esc를 누르면 풀리고 일시정지됩니다.</li>
+          <li>마우스 감도는 타이틀과 일시정지 화면에서 바꿀 수 있습니다. 감도는 커서가 고정된 상태에서 적용됩니다.</li>
         </ul>
         <div class="row">
           <button id="btn-help-back" class="btn">돌아가기</button>
@@ -107,8 +108,8 @@
           <button id="btn-quit" class="btn">타이틀로</button>
         </div>
         <div class="settings">
-          <label>음량 <input id="vol-pause" type="range" min="0" max="100"></label>
-          <label>마우스 감도 <input id="sens-pause" type="range" min="30" max="200"></label>
+          <label><span>음량</span> <input id="vol-pause" type="range" min="0" max="100"></label>
+          <label><span>마우스 감도</span> <input id="sens-pause" type="range" min="20" max="300"> <b id="sens-pause-v" class="sv">1.00</b></label>
           <label class="check"><input id="shake-pause" type="checkbox"> 화면 흔들림</label>
         </div>
       </div>

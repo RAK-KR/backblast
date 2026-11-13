@@ -53,9 +53,9 @@ export class Player {
 
   get alive() { return !this.dead; }
 
-  muzzlePos() {
+  muzzlePos(angle = this.aim) {
     const len = 34;
-    return { x: this.x + Math.cos(this.aim) * len, y: this.y - 4 + Math.sin(this.aim) * len };
+    return { x: this.x + Math.cos(angle) * len, y: this.y - 4 + Math.sin(angle) * len };
   }
 
   // 반환값: 발사한 탄 목록 (game에서 처리)
@@ -114,27 +114,29 @@ export class Player {
 
       // 우클릭: 보조무기 (이동 핵심) — 무기마다 이동 방식이 다름
       const a2 = this.aDef;
+      const altAim = this.aim;
+      const adir = { x: Math.cos(altAim), y: Math.sin(altAim) };
       if (a2.mode === 'jet') {
         // 분사기: 누르고 있는 동안 계속 밀려남
         if (altHeld && (this.fuel > 0 || this.ultActive)) {
           this.jetting = true;
           if (!this.ultActive) this.fuel = Math.max(0, this.fuel - a2.drain * dt);
-          this.vx -= dir.x * a2.thrust * altRecoilMul * dt;
-          this.vy -= dir.y * a2.thrust * altRecoilMul * dt;
+          this.vx -= adir.x * a2.thrust * altRecoilMul * dt;
+          this.vy -= adir.y * a2.thrust * altRecoilMul * dt;
           if (this.vy < -60 || this.vx !== 0) this.grounded = false;
           this.groundTime = 0;
           this.jetTick -= dt;
           if (this.jetTick <= 0) {
             this.jetTick = a2.tick;
-            const mp = this.muzzlePos();
+            const mp = this.muzzlePos(altAim);
             shots.push({
-              kind: 'flame', x: mp.x, y: mp.y, a: this.aim + (Math.random() - 0.5) * a2.spread * 2,
+              kind: 'flame', x: mp.x, y: mp.y, a: altAim + (Math.random() - 0.5) * a2.spread * 2,
               speed: a2.speed * (0.8 + Math.random() * 0.4), damage: a2.damage * amul,
               stagger: a2.stagger, size: 6, life: a2.life, heavy: false,
             });
             sfx.jet();
-            fx.spark(mp.x, mp.y, this.aim + (Math.random() - 0.5) * 0.4, 3, '#ffcf86', 500, 0.3, 0.18);
-            fx.smoke(this.x - dir.x * 10, this.y - dir.y * 10, 1, '120,80,90', 10, 0.4);
+            fx.spark(mp.x, mp.y, altAim + (Math.random() - 0.5) * 0.4, 3, '#ffcf86', 500, 0.3, 0.18);
+            fx.smoke(this.x - adir.x * 10, this.y - adir.y * 10, 1, '120,80,90', 10, 0.4);
           }
           this.altMuzzle = 0.05;
         }
@@ -147,14 +149,14 @@ export class Player {
           if (!this.ultActive) this.shells--;
           this.altCd = 0.18;
           this.hookOut = true;
-          const mp = this.muzzlePos();
+          const mp = this.muzzlePos(altAim);
           shots.push({
-            kind: 'hook', x: mp.x, y: mp.y, a: this.aim, speed: a2.speed, range: a2.range,
+            kind: 'hook', x: mp.x, y: mp.y, a: altAim, speed: a2.speed, range: a2.range,
             damage: a2.damage * amul, stagger: a2.stagger, pullSpeed: a2.pullSpeed,
           });
           this.altMuzzle = 0.07;
           sfx.hook();
-          fx.spark(mp.x, mp.y, this.aim, 8, '#ffe6b0', 500, 0.3, 0.15);
+          fx.spark(mp.x, mp.y, altAim, 8, '#ffe6b0', 500, 0.3, 0.15);
         } else if (!this.hookOut) {
           this.altCd = 0.12;
           sfx.empty();
@@ -163,11 +165,11 @@ export class Player {
         if (this.shells > 0 || this.ultActive) {
           if (!this.ultActive) this.shells--;
           this.altCd = this.ultActive ? ULT.altCd : 0.16;
-          const mp = this.muzzlePos();
+          const mp = this.muzzlePos(altAim);
           for (let i = 0; i < a2.pellets; i++) {
             const spread = a2.pellets === 1 ? 0 : (i / (a2.pellets - 1) - 0.5) * a2.spread * 2 + (Math.random() - 0.5) * 0.05;
             shots.push({
-              kind: 'pellet', x: mp.x, y: mp.y, a: this.aim + spread,
+              kind: 'pellet', x: mp.x, y: mp.y, a: altAim + spread,
               speed: a2.speed * (0.9 + Math.random() * 0.2), damage: a2.damage * amul,
               stagger: a2.stagger, size: a2.pellets === 1 ? 7 : 3.5, life: a2.life, heavy: a2.pellets === 1,
               bounce: a2.bulletBounce || 0,
@@ -175,15 +177,15 @@ export class Player {
           }
           // 기존 속도를 줄이고 반대 방향으로 강하게 튕김
           const keep = altRecoilMul < 1 ? 0.6 : 0.3;
-          this.vx = this.vx * keep - dir.x * a2.recoil * altRecoilMul;
-          this.vy = this.vy * keep - dir.y * a2.recoil * altRecoilMul;
+          this.vx = this.vx * keep - adir.x * a2.recoil * altRecoilMul;
+          this.vy = this.vy * keep - adir.y * a2.recoil * altRecoilMul;
           this.altMuzzle = 0.09;
           if (a2.bounceTime) this.bounceT = a2.bounceTime;
           this.grounded = false;
           this.groundTime = 0;
           (this.alt.id === 'slug' ? sfx.slug : sfx.blast)();
           fx.shake(7 * (altRecoilMul < 1 ? 0.5 : 1));
-          fx.spark(mp.x, mp.y, this.aim, 18, '#ffd6a0', 700, 0.5, 0.2);
+          fx.spark(mp.x, mp.y, altAim, 18, '#ffd6a0', 700, 0.5, 0.2);
           fx.smoke(mp.x, mp.y, 5, '92,72,86', 14, 0.6);
           fx.ring(mp.x, mp.y, 6, 46, 0.18, '255,230,190', 5);
         } else {

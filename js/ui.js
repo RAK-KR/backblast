@@ -123,6 +123,9 @@ export class UI {
       s.oninput = () => {
         $('#sens-title').value = s.value;
         $('#sens-pause').value = s.value;
+        const txt = (Number(s.value) / 100).toFixed(2);
+        $('#sens-title-v').textContent = txt;
+        $('#sens-pause-v').textContent = txt;
         this.h.setSens(Number(s.value) / 100);
       };
     }
@@ -143,6 +146,8 @@ export class UI {
     const sv = Math.round((settings.sens || 1) * 100);
     $('#sens-title').value = sv;
     $('#sens-pause').value = sv;
+    $('#sens-title-v').textContent = (sv / 100).toFixed(2);
+    $('#sens-pause-v').textContent = (sv / 100).toFixed(2);
     $('#shake-title').checked = settings.shake > 0;
     $('#shake-pause').checked = settings.shake > 0;
   }
