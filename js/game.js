@@ -173,9 +173,12 @@ export class Game {
       if (this.ultT <= 0) { this.ultT = 0; this.sfx.reload(); }
     }
     p.ultActive = this.ultT > 0;
+    // 그로기: 주무기 반동만 줄어듦 (산탄 반동은 그대로라 보스에게 붙을 수 있음)
+    // 극딜: 둘 다 반동 없음
     const recoilMul = p.ultActive ? 0 : groggy ? BOSS.groggyRecoilMul : 1;
+    const altRecoilMul = p.ultActive ? 0 : 1;
     const heatMul = p.ultActive ? 0 : groggy ? 0.5 : 1;
-    const shots = p.update(dt, canAct ? input : { ...input, left: false }, canAct && altPressed(), recoilMul, heatMul, this.sfx, this.fx);
+    const shots = p.update(dt, canAct ? input : { ...input, left: false }, canAct && altPressed(), recoilMul, heatMul, this.sfx, this.fx, altRecoilMul);
     for (const s of shots) this.spawnShot(s);
 
     // 보스

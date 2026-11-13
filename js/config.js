@@ -32,7 +32,7 @@ export const PLAYER = {
 export const BOSS = {
   groggyTime: 6.0,
   groggyDamageMul: 2.0,   // 그로기 중 받는 피해 배율
-  groggyRecoilMul: 0.3,   // 그로기 중 플레이어 반동 배율 (극딜 구간)
+  groggyRecoilMul: 0.3,   // 그로기 중 주무기 반동 배율 (산탄 반동은 그대로)
 };
 
 // 극딜 스킬 (궁극기)

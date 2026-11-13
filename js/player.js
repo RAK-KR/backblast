@@ -46,7 +46,7 @@ export class Player {
   }
 
   // 반환값: 발사한 탄 목록 (game에서 처리)
-  update(dt, input, altPressed, recoilMul, heatMul, sfx, fx) {
+  update(dt, input, altPressed, recoilMul, heatMul, sfx, fx, altRecoilMul = 1) {
     const shots = [];
     this.aim = Math.atan2(input.my - (this.y - 4), input.mx - this.x);
     this.face = Math.cos(this.aim) >= 0 ? 1 : -1;
@@ -113,14 +113,14 @@ export class Player {
             });
           }
           // 기존 속도를 줄이고 반대 방향으로 강하게 튕김
-          const keep = recoilMul < 1 ? 0.6 : 0.3;
-          this.vx = this.vx * keep - dir.x * a2.recoil * recoilMul;
-          this.vy = this.vy * keep - dir.y * a2.recoil * recoilMul;
+          const keep = altRecoilMul < 1 ? 0.6 : 0.3;
+          this.vx = this.vx * keep - dir.x * a2.recoil * altRecoilMul;
+          this.vy = this.vy * keep - dir.y * a2.recoil * altRecoilMul;
           this.altMuzzle = 0.09;
           this.grounded = false;
           this.groundTime = 0;
           (this.alt.id === 'slug' ? sfx.slug : sfx.blast)();
-          fx.shake(7 * (recoilMul < 1 ? 0.5 : 1));
+          fx.shake(7 * (altRecoilMul < 1 ? 0.5 : 1));
           fx.spark(mp.x, mp.y, this.aim, 18, '#ffd6a0', 700, 0.5, 0.2);
           fx.smoke(mp.x, mp.y, 5, '92,72,86', 14, 0.6);
           fx.ring(mp.x, mp.y, 6, 46, 0.18, '255,230,190', 5);
