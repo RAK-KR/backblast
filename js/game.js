@@ -549,34 +549,60 @@ export class Game {
     }
   }
 
-  // 레이저 경고 중: 화면 가운데에 반투명 경고 표시 (화면을 가리지 않게 작고 옅게)
+  // 레이저 경고 중: 화면 가운데 큰 경고 표시 + 화면 가장자리 붉은 점멸
   drawLaserWarning(g, t) {
     const warn = this.hazards.some((h) => (h.type === 'laserH' || h.type === 'laserV') && !h.fired && !h.dead);
     if (!warn) { this.warnT = 0; return; }
     this.warnT = (this.warnT || 0) + 1 / 60;
-    const pop = Math.min(1, this.warnT * 6);              // 처음 뜰 때 살짝 커지며 등장
-    const pulse = 0.5 + 0.5 * Math.sin(t * 14);
-    const cx = W / 2, cy = H * 0.42;
-    const s = 34 * (0.85 + 0.15 * pop);
+    const pop = Math.min(1, this.warnT * 8);
+    const blink = Math.sin(t * 16) > -0.2 ? 1 : 0.55;     // 또렷하게 깜빡임
+    const cx = W / 2, cy = H * 0.4;
+    const s = 62 * (0.7 + 0.3 * pop) * (1 + 0.04 * Math.sin(t * 16));
+
+    // 화면 가장자리 붉은 점멸 (가운데는 가리지 않음)
+    const edge = 0.22 + 0.18 * Math.max(0, Math.sin(t * 16));
+    const eg = g.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75);
+    eg.addColorStop(0, 'rgba(255,30,70,0)');
+    eg.addColorStop(1, `rgba(255,30,70,${edge})`);
+    g.fillStyle = eg;
+    g.fillRect(0, 0, W, H);
+
     g.save();
     g.translate(cx, cy);
-    g.globalAlpha = 0.35 + 0.3 * pulse;
-    // 삼각형
+    g.globalAlpha = blink;
+    // 바깥 빛
+    g.shadowColor = 'rgba(255,40,90,0.9)';
+    g.shadowBlur = 28;
     g.beginPath();
     g.moveTo(0, -s);
-    g.lineTo(s * 1.1, s * 0.85);
-    g.lineTo(-s * 1.1, s * 0.85);
+    g.lineTo(s * 1.12, s * 0.86);
+    g.lineTo(-s * 1.12, s * 0.86);
     g.closePath();
-    g.fillStyle = 'rgba(255,54,100,0.35)';
+    g.fillStyle = 'rgba(200,20,60,0.85)';
     g.fill();
-    g.lineWidth = 4;
+    g.shadowBlur = 0;
+    g.lineWidth = 7;
     g.lineJoin = 'round';
-    g.strokeStyle = '#ff5a8a';
+    g.strokeStyle = '#ffd0dc';
+    g.stroke();
+    g.lineWidth = 3;
+    g.strokeStyle = '#ff3d6e';
     g.stroke();
     // 느낌표
-    g.fillStyle = '#f3ece2';
-    g.fillRect(-3.5, -s * 0.45, 7, s * 0.75);
-    g.beginPath(); g.arc(0, s * 0.55, 4.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(-7, -s * 0.5); g.lineTo(7, -s * 0.5); g.lineTo(4.5, s * 0.32); g.lineTo(-4.5, s * 0.32); g.closePath();
+    g.fill();
+    g.beginPath(); g.arc(0, s * 0.58, 7, 0, Math.PI * 2); g.fill();
+    // 글자
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.font = '700 22px "Cinzel", "Noto Serif KR", serif';
+    g.lineWidth = 5;
+    g.strokeStyle = 'rgba(16,6,16,0.9)';
+    g.strokeText('WARNING', 0, s * 0.86 + 34);
+    g.fillStyle = '#ff6a92';
+    g.fillText('WARNING', 0, s * 0.86 + 34);
     g.restore();
     g.globalAlpha = 1;
   }
