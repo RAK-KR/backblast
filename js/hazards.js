@@ -21,6 +21,11 @@ export function mine(x, y, vx, vy) {
   return { type: 'mine', x, y, vx, vy, r: 15, t: 0, fuse: -1, hp: 1, dmg: DMG.mine, life: 4.8 };
 }
 
+// 탄비 경고 기둥 (피해 없음)
+export function colwarn(x, w, life) {
+  return { type: 'colwarn', x, w, t: 0, life, dmg: 0 };
+}
+
 export function blast(x, y, r) {
   return { type: 'blast', x, y, r, t: 0, life: 0.35, hitDone: false, dmg: DMG.mine };
 }
@@ -82,6 +87,8 @@ export function updateHazard(h, dt, game) {
       return !h.dead;
     }
     case 'blast':
+      return h.t < h.life;
+    case 'colwarn':
       return h.t < h.life;
     default:
       return false;
@@ -206,6 +213,16 @@ export function drawHazard(g, h, t) {
         g.lineWidth = 2;
         g.beginPath(); g.arc(h.x, h.y, 95, 0, Math.PI * 2); g.stroke();
       }
+      break;
+    }
+    case 'colwarn': {
+      const k = h.t / h.life;
+      const a = 0.12 + 0.18 * Math.abs(Math.sin(t * 18));
+      g.fillStyle = `rgba(255,54,100,${a * (0.5 + k * 0.5)})`;
+      g.fillRect(h.x - h.w / 2 + 2, ARENA.top, h.w - 4, ARENA.floor - ARENA.top);
+      g.fillStyle = `rgba(255,120,160,${0.5 + 0.5 * k})`;
+      g.beginPath();
+      g.moveTo(h.x - 8, ARENA.top + 6); g.lineTo(h.x + 8, ARENA.top + 6); g.lineTo(h.x, ARENA.top + 20); g.closePath(); g.fill();
       break;
     }
     case 'blast': {

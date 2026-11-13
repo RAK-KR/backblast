@@ -4,7 +4,7 @@ import { Player } from './player.js';
 import { Boss } from './boss.js';
 import { FX } from './fx.js';
 import { updateHazard, hazardHits, drawHazard, blast } from './hazards.js';
-import { input, altPressed, isLocked } from './input.js';
+import { input, altPressed, isLocked, wasPressed, bindLabel } from './input.js';
 import { buildBackground, buildVignette, Motes } from './render.js';
 import { weaponDef } from './weapons.js';
 import { BOSSES, DUMMY } from './bosses.js';
@@ -169,7 +169,7 @@ export class Game {
     // 플레이어
     const canAct = this.state === 'play';
     // 극딜 스킬 발동
-    if (canAct && input.pressed.has('KeyF') && this.ult >= 100 && this.ultT <= 0) this.activateUlt();
+    if (canAct && wasPressed('ult') && this.ult >= 100 && this.ultT <= 0) this.activateUlt();
     if (this.ultT > 0) {
       this.ultT -= dt;
       if (this.ultT <= 0) { this.ultT = 0; this.sfx.reload(); }
@@ -180,7 +180,8 @@ export class Game {
     const recoilMul = p.ultActive ? 0 : groggy ? BOSS.groggyRecoilMul : 1;
     const altRecoilMul = p.ultActive ? 0 : 1;
     const heatMul = p.ultActive ? 0 : groggy ? 0.5 : 1;
-    const altHeld = canAct && (input.right || input.keys.has('Space') || input.keys.has('ShiftLeft'));
+    const altHeld = canAct && input.right;
+    if (canAct && wasPressed('drop')) p.startDrop(this.fx, this.sfx);
     const shots = p.update(dt, canAct ? input : { ...input, left: false }, canAct && altPressed(), recoilMul, heatMul, this.sfx, this.fx, altRecoilMul, altHeld);
     for (const s of shots) this.spawnShot(s);
 
@@ -232,6 +233,7 @@ export class Game {
           if (cd > 0 && p.hurt(cd, this.fx, this.sfx, b.x, b.y)) this.stats.taken += cd;
           p.x = b.x + nx * minD;
           p.y = b.y + ny * minD;
+          p.cancelDrop();
           const vn = p.vx * nx + p.vy * ny;
           if (vn < 0) { p.vx -= vn * nx * 1.4; p.vy -= vn * ny * 1.4; }
           if (p.y > ARENA.floor - p.r) p.y = ARENA.floor - p.r;
@@ -273,6 +275,17 @@ export class Game {
   spawnShot(s) {
     if (s.kind === 'beam') {
       this.fireBeam(s);
+      return;
+    }
+    if (s.kind === 'blinkburst') {
+      // 블링크로 떠난 자리 폭발
+      const b = this.boss;
+      if (!b.hidden && !b.dead && Math.hypot(b.x - s.x, b.y - s.y) < 90 + b.r) {
+        b.takeDamage(s.damage, s.stagger, s.x, s.y, this);
+        this.sfx.bigHit();
+      }
+      for (const tg of this.targets) if (!tg.dead && Math.hypot(tg.x - s.x, tg.y - s.y) < 90 + tg.r) this.hitTarget(tg, s.damage);
+      for (const h of this.hazards) if (h.type === 'mine' && !h.dead && Math.hypot(h.x - s.x, h.y - s.y) < 100) this.explodeMine(h, true);
       return;
     }
     if (s.kind === 'hook') {
@@ -459,7 +472,7 @@ export class Game {
     if (sh > 0) g.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
 
     this.boss.drawTelegraph(g, t);
-    for (const h of this.hazards) if (h.type === 'laserH' || h.type === 'laserV' || h.type === 'shock') drawHazard(g, h, t);
+    for (const h of this.hazards) if (h.type === 'laserH' || h.type === 'laserV' || h.type === 'shock' || h.type === 'colwarn') drawHazard(g, h, t);
 
     this.boss.draw(g, t);
     if (this.tutorial) this.tutorial.drawWorld(g, t, this);
@@ -507,6 +520,7 @@ export class Game {
     }
     this.drawHook(g);
     if (!this.player.dead || Math.floor(t * 10) % 2 === 0) this.player.draw(g, t);
+    this.drawFeetAmmo(g);
 
     this.fx.drawWorld(g);
     for (const h of this.hazards) if (h.type === 'orb' || h.type === 'blast') drawHazard(g, h, t);
@@ -551,7 +565,7 @@ export class Game {
 
   // 레이저 경고 중: 화면 가운데 큰 경고 표시 + 화면 가장자리 붉은 점멸
   drawLaserWarning(g, t) {
-    const warn = this.hazards.some((h) => (h.type === 'laserH' || h.type === 'laserV') && !h.fired && !h.dead);
+    const warn = this.hazards.some((h) => ((h.type === 'laserH' || h.type === 'laserV') && !h.fired && !h.dead) || (h.type === 'colwarn' && !h.dead));
     if (!warn) { this.warnT = 0; return; }
     this.warnT = (this.warnT || 0) + 1 / 60;
     const pop = Math.min(1, this.warnT * 8);
@@ -607,6 +621,35 @@ export class Game {
     g.globalAlpha = 1;
   }
 
+  // 남은 산탄 / 연료: 캐릭터 발밑에 표시
+  drawFeetAmmo(g) {
+    const p = this.player;
+    if (p.dead) return;
+    const fx = p.x, fy = p.y + p.r + 12;
+    if (p.aDef.mode === 'jet') {
+      g.fillStyle = 'rgba(16,6,16,0.7)';
+      g.fillRect(fx - 23, fy - 2, 46, 8);
+      g.fillStyle = p.fuel > 0.25 ? '#e8c88a' : '#ff4d7e';
+      g.fillRect(fx - 21, fy, 42 * p.fuel, 4);
+      return;
+    }
+    const n = p.aDef.shells;
+    const w = 9, gap = 4;
+    const total = n * w + (n - 1) * gap;
+    for (let i = 0; i < n; i++) {
+      const bx = fx - total / 2 + i * (w + gap);
+      g.fillStyle = 'rgba(16,6,16,0.75)';
+      g.fillRect(bx - 1.5, fy - 1.5, w + 3, w + 3);
+      g.fillStyle = i < p.shells || p.ultActive ? '#f0d08a' : 'rgba(90,80,90,0.9)';
+      g.fillRect(bx, fy, w, w);
+    }
+    // 공중 자동 충전 진행도
+    if (p.shells < n && !p.grounded && !p.ultActive) {
+      g.fillStyle = 'rgba(240,208,138,0.5)';
+      g.fillRect(fx - total / 2, fy + w + 4, total * Math.min(1, p.shellAirTimer / PLAYER.shellRefillAir), 2);
+    }
+  }
+
   drawHook(g) {
     const p = this.player;
     let tx = null, ty = null;
@@ -650,7 +693,7 @@ export class Game {
 
     // 키 안내 (항상 오른쪽 위)
     g.font = '500 13px "Noto Sans KR", sans-serif';
-    const keys = [['좌클릭', '연사'], ['우클릭 / Space', '보조무기 (조준 방향)'], ['F', '극딜 (게이지 가득)'], ['R', '재시작'], ['Esc', '일시정지']];
+    const keys = [[bindLabel('fire'), '연사'], [bindLabel('alt'), '보조무기 (조준 방향)'], [bindLabel('drop'), '뚝떨 (수직 낙하)'], [bindLabel('ult'), '극딜 (게이지 가득)'], [bindLabel('restart'), '재시작'], ['Esc', '일시정지']];
     let ky = this.mode === 'boss' ? 78 : 50;
     for (const [k, v] of keys) {
       g.fillStyle = 'rgba(16,6,16,0.55)';
@@ -899,19 +942,7 @@ export class Game {
       g.arc(x, y, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p.heat);
       g.stroke();
     }
-    // 산탄 점 / 연료
-    if (p.aDef.mode === 'jet') {
-      g.fillStyle = 'rgba(80,80,86,0.8)';
-      g.fillRect(x - 20, y + 31, 40, 4);
-      g.fillStyle = p.fuel > 0.25 ? '#e8c88a' : '#ff4d7e';
-      g.fillRect(x - 20, y + 31, 40 * p.fuel, 4);
-    } else {
-      const n = p.aDef.shells;
-      for (let i = 0; i < n; i++) {
-        g.fillStyle = i < p.shells ? '#e8c88a' : 'rgba(80,80,86,0.8)';
-        g.fillRect(x - (n * 10) / 2 + i * 10 + 1, y + 30, 7, 7);
-      }
-    }
+
     if (this.ult >= 100 && this.ultT <= 0) {
       g.font = '700 13px "Cinzel", "Noto Serif KR", serif';
       g.textAlign = 'left';

@@ -3,7 +3,7 @@ import { W, H } from './config.js';
 import { Game } from './game.js';
 import { Boss } from './boss.js';
 import { UI } from './ui.js';
-import { input, initInput, setMapper, endFrame, setSensitivity, lockPointer, unlockPointer, isLocked } from './input.js';
+import { input, initInput, setMapper, endFrame, beginFrame, setSensitivity, lockPointer, unlockPointer, isLocked, wasPressed, setBinds, getBinds } from './input.js';
 import { initAudio, setVolume, sfx } from './audio.js';
 import { loadSave, writeSave } from './save.js';
 import { rollBossDrop } from './weapons.js';
@@ -16,6 +16,7 @@ const g = canvas.getContext('2d');
 let save = loadSave();
 setVolume(save.settings.volume);
 setSensitivity(save.settings.sens || 1);
+setBinds(save.settings.keys);
 
 const game = new Game(sfx);
 game.fx.shakeMul = save.settings.shake;
@@ -87,6 +88,7 @@ const ui = new UI({
   setVolume: (v) => { save.settings.volume = v; setVolume(v); writeSave(save); },
   setShake: (v) => { save.settings.shake = v; game.fx.shakeMul = v; writeSave(save); },
   setSens: (v) => { save.settings.sens = v; setSensitivity(v); writeSave(save); },
+  saveBinds: () => { save.settings.keys = getBinds(); writeSave(save); },
 });
 ui.syncSettings(save.settings);
 ui.updateTitle(save);
@@ -141,8 +143,7 @@ function pause() {
   if (game.state !== 'play') return;
   game.prevState = 'play';
   game.state = 'pause';
-  input.left = false;
-  input.right = false;
+  input.keys.clear();
   unlockPointer();
   ui.showPause();
   document.body.classList.remove('playing');
@@ -172,13 +173,16 @@ function frame(now) {
   const dt = Math.min(1 / 30, (now - last) / 1000);
   last = now;
   const t = now / 1000;
+  beginFrame();
 
-  if (input.pressed.has('Escape')) {
+  if (input.pressed.has('Escape') && ui.cur === 'keys') {
+    ui.show(ui.keysReturn);
+  } else if (input.pressed.has('Escape')) {
     // 잠금 해제와 같은 Esc 입력으로 바로 다시 재개되지 않도록
     if (game.state === 'play') pause();
     else if (game.state === 'pause' && performance.now() - lockLostAt > 400) resume();
   }
-  if (input.pressed.has('KeyR') && (game.state === 'play' || game.state === 'pause' || game.state === 'defeat')) startStage(current);
+  if (wasPressed('restart') && (game.state === 'play' || game.state === 'pause' || game.state === 'defeat')) startStage(current);
 
   game.update(dt);
   g.clearRect(0, 0, W, H);

@@ -1,5 +1,5 @@
 // 플레이어: 걷기·점프 없이 총 반동으로만 이동합니다.
-import { ARENA, PHYS, PLAYER, ULT } from './config.js';
+import { ARENA, PHYS, PLAYER, ULT, DROP } from './config.js';
 import { weaponDef, weaponMul } from './weapons.js';
 
 export class Player {
@@ -42,6 +42,26 @@ export class Player {
     this.pull = null;        // 앵커 건 당기기 { x, y, t, speed }
     this.hookOut = false;
     this.bounceT = 0;        // 리바운더 튕김 상태
+    this.dropFreeze = 0;     // 뚝떨 정지 시간
+    this.dropping = false;   // 뚝떨 낙하 중
+    this.afterimage = null;  // 블링크 잔상
+  }
+
+  // 뚝떨: 공중에서만. 그 자리에 잠깐 멈췄다가 수직으로 떨어짐
+  startDrop(fx, sfx) {
+    if (this.dead || this.grounded || this.dropping || this.dropFreeze > 0) return;
+    this.pull = null;
+    this.bounceT = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.dropFreeze = DROP.freeze;
+    sfx.hook();
+    fx.ring(this.x, this.y, 8, 40, 0.15, '242,235,222', 3);
+  }
+
+  cancelDrop() {
+    this.dropFreeze = 0;
+    this.dropping = false;
   }
 
   startPull(x, y, speed) {
@@ -98,12 +118,19 @@ export class Player {
         this.heat += p.heat * heatMul;
         if (this.heat >= 1) { this.heat = 1; this.overheat = true; }
         const mp = this.muzzlePos();
-        const a = this.aim + (Math.random() - 0.5) * p.spread * 2;
-        shots.push({
-          kind: p.hitscan ? 'beam' : 'bullet', x: mp.x, y: mp.y, a,
-          speed: p.speed, damage: p.damage * mul, stagger: p.stagger, size: p.size, life: 0.9,
-          heavy: p.damage >= 30,
-        });
+        const nb = p.bullets || 1;
+        let a = this.aim;
+        for (let i = 0; i < nb; i++) {
+          // 여러 발이면 부채꼴, 한 발이면 약간 흩어짐
+          a = nb > 1
+            ? this.aim + (i / (nb - 1) - 0.5) * p.spread * 2 + (Math.random() - 0.5) * 0.02
+            : this.aim + (Math.random() - 0.5) * p.spread * 2;
+          shots.push({
+            kind: p.hitscan ? 'beam' : 'bullet', x: mp.x, y: mp.y, a,
+            speed: p.speed, damage: p.damage * mul, stagger: p.stagger, size: p.size, life: 0.9,
+            heavy: p.damage >= 30,
+          });
+        }
         this.vx -= dir.x * p.recoil * recoilMul;
         this.vy -= dir.y * p.recoil * recoilMul;
         this.muzzle = 0.05;
@@ -120,6 +147,7 @@ export class Player {
         // 분사기: 누르고 있는 동안 계속 밀려남
         if (altHeld && (this.fuel > 0 || this.ultActive)) {
           this.jetting = true;
+          this.cancelDrop();
           if (!this.ultActive) this.fuel = Math.max(0, this.fuel - a2.drain * dt);
           this.vx -= adir.x * a2.thrust * altRecoilMul * dt;
           this.vy -= adir.y * a2.thrust * altRecoilMul * dt;
@@ -140,6 +168,35 @@ export class Player {
           }
           this.altMuzzle = 0.05;
         }
+      } else if (a2.mode === 'blink' && altPressed && this.altCd <= 0) {
+        // 블링크: 조준 방향으로 순간이동, 떠난 자리에 폭발
+        if (this.shells > 0 || this.ultActive) {
+          if (!this.ultActive) this.shells--;
+          this.altCd = this.ultActive ? ULT.altCd : 0.2;
+          this.cancelDrop();
+          this.pull = null;
+          const ox = this.x, oy = this.y;
+          const nx = Math.max(ARENA.left + this.r, Math.min(ARENA.right - this.r, this.x + adir.x * a2.range));
+          const ny = Math.max(ARENA.top + this.r, Math.min(ARENA.floor - this.r, this.y + adir.y * a2.range));
+          this.x = nx;
+          this.y = ny;
+          this.vx = adir.x * a2.carry * altRecoilMul;
+          this.vy = adir.y * a2.carry * altRecoilMul;
+          this.iframes = Math.max(this.iframes, a2.iframes);
+          this.grounded = false;
+          this.groundTime = 0;
+          for (const s of this.scarf) { s.x = nx; s.y = ny; }
+          shots.push({ kind: 'blinkburst', x: ox, y: oy, damage: a2.damage * amul, stagger: a2.stagger, a: 0 });
+          sfx.latch();
+          fx.ring(ox, oy, 8, 90, 0.3, '255,90,140', 6);
+          fx.ring(nx, ny, 40, 6, 0.25, '242,235,222', 4);
+          fx.spark(ox, oy, 0, 16, '#ff9ab8', 500, Math.PI, 0.3);
+          // 잔상
+          this.afterimage = { x: ox, y: oy, t: 0.25 };
+        } else {
+          this.altCd = 0.12;
+          sfx.empty();
+        }
       } else if (a2.mode === 'anchor' && altPressed && this.altCd <= 0) {
         if (this.pull) {
           // 당기는 중 다시 누르면 놓음
@@ -149,6 +206,7 @@ export class Player {
           if (!this.ultActive) this.shells--;
           this.altCd = 0.18;
           this.hookOut = true;
+          this.cancelDrop();
           const mp = this.muzzlePos(altAim);
           shots.push({
             kind: 'hook', x: mp.x, y: mp.y, a: altAim, speed: a2.speed, range: a2.range,
@@ -180,6 +238,7 @@ export class Player {
           this.vx = this.vx * keep - adir.x * a2.recoil * altRecoilMul;
           this.vy = this.vy * keep - adir.y * a2.recoil * altRecoilMul;
           this.altMuzzle = 0.09;
+          this.cancelDrop();
           if (a2.bounceTime) this.bounceT = a2.bounceTime;
           this.grounded = false;
           this.groundTime = 0;
@@ -196,7 +255,20 @@ export class Player {
     }
 
     // 물리
-    if (this.pull) {
+    if (this.dropFreeze > 0) {
+      // 뚝떨: 제자리 정지
+      this.dropFreeze -= dt;
+      this.vx = 0;
+      this.vy = 0;
+      if (this.dropFreeze <= 0) {
+        this.dropFreeze = 0;
+        this.dropping = true;
+        this.vy = DROP.speed;
+      }
+    } else if (this.dropping) {
+      this.vx = 0;
+      this.vy = Math.max(this.vy, DROP.speed);
+    } else if (this.pull) {
       // 갈고리 지점으로 끌려감 (중력 무시)
       const pl = this.pull;
       pl.t += dt;
@@ -211,6 +283,10 @@ export class Player {
       }
     } else {
       this.vy += PHYS.gravity * dt;
+    }
+    if (this.dropFreeze > 0 || this.dropping) {
+      // 낙하 중에는 주무기 반동으로 옆으로 밀리지 않음
+      this.vx = 0;
     }
     const bouncy = this.bounceT > 0;
     const wallB = bouncy ? 0.9 : PHYS.wallBounce;
@@ -232,7 +308,17 @@ export class Player {
     if (this.y >= ARENA.floor - this.r) {
       this.y = ARENA.floor - this.r;
       if (this.pull) this.pull = null;
-      if (bouncy && this.vy > 80) {
+      if (this.dropping) {
+        // 뚝떨 착지
+        this.dropping = false;
+        this.vy = 0;
+        this.grounded = true;
+        this.squash = 1;
+        sfx.land();
+        fx.shake(5);
+        fx.smoke(this.x, ARENA.floor - 4, 5, '84,60,78', 14, 0.5);
+        fx.ring(this.x, ARENA.floor, 6, 60, 0.25, '242,235,222', 4);
+      } else if (bouncy && this.vy > 80) {
         this.vy = -this.vy * 0.85;
         this.grounded = false;
         sfx.land();
@@ -301,6 +387,7 @@ export class Player {
     this.hp -= dmg;
     this.iframes = PLAYER.iframes;
     this.hurtFlash = 0.25;
+    this.cancelDrop();
     const a = Math.atan2(this.y - fromY, this.x - fromX);
     this.vx += Math.cos(a) * 380;
     this.vy += Math.sin(a) * 380 - 120;
@@ -315,6 +402,24 @@ export class Player {
   }
 
   draw(g, t) {
+    if (this.afterimage) {
+      const ai = this.afterimage;
+      ai.t -= 1 / 60;
+      if (ai.t <= 0) this.afterimage = null;
+      else {
+        g.fillStyle = `rgba(255,140,180,${ai.t * 1.6})`;
+        g.beginPath(); g.ellipse(ai.x, ai.y - 4, 14, 24, 0, 0, Math.PI * 2); g.fill();
+      }
+    }
+    if (this.dropping || this.dropFreeze > 0) {
+      // 뚝떨 잔상
+      const len = this.dropping ? 90 : 20;
+      const gr = g.createLinearGradient(this.x, this.y - len, this.x, this.y);
+      gr.addColorStop(0, 'rgba(242,235,222,0)');
+      gr.addColorStop(1, 'rgba(242,235,222,0.55)');
+      g.fillStyle = gr;
+      g.fillRect(this.x - 10, this.y - len, 20, len);
+    }
     const blink = this.iframes > 0 && Math.floor(t * 20) % 2 === 0;
     const f = this.face;
     g.save();

@@ -1,9 +1,11 @@
 // 기초 튜토리얼: 단계별로 조작과 회피를 직접 해 보며 익힘
 import { W, ARENA } from './config.js';
-import { input } from './input.js';
+import { input, bindLabel } from './input.js';
 import { shock, laserH, orb, mine } from './hazards.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// 문구 안의 {fire} {alt} {drop} {ult} 를 현재 키 설정으로 바꿈
+const fmt = (s) => s.replace(/\{(fire|alt|drop|ult)\}/g, (_, a) => bindLabel(a));
 
 function target(x, y, r = 26, hp = 60) { return { x, y, r, hp, max: hp, dead: false, flash: 0 }; }
 function ring(x, y, r = 46) { return { x, y, r, hit: false }; }
@@ -11,7 +13,7 @@ function ring(x, y, r = 46) { return { x, y, r, hit: false }; }
 const STEPS = [
   {
     title: '조준과 연사',
-    text: ['마우스로 조준하고, 좌클릭을 누르고 있으면 주무기를 연사합니다.', '과녁 3개를 모두 부수세요.'],
+    text: ['마우스로 조준하고, {fire}을(를) 누르고 있으면 주무기를 연사합니다.', '과녁 3개를 모두 부수세요.'],
     setup(game) {
       game.targets = [target(820, 420), target(1120, 260), target(1380, 520)];
     },
@@ -20,7 +22,7 @@ const STEPS = [
   },
   {
     title: '산탄 점프',
-    text: ['우클릭(또는 Space)을 누르면 산탄이 나가고, 쏜 반대쪽으로 크게 튕겨 나갑니다.', '마우스를 발밑 아래로 내려 조준하고 쏴서 점선 높이까지 뛰어오르세요.'],
+    text: ['{alt}을(를) 누르면 산탄이 나가고, 쏜 반대쪽으로 크게 튕겨 나갑니다.', '마우스를 발밑 아래로 내려 조준하고 쏴서 점선 높이까지 뛰어오르세요. 남은 산탄은 발밑에 표시됩니다.'],
     setup(game, tu) { tu.lineY = ARENA.floor - 250; tu.arrow = true; },
     update: (game, tu) => game.player.y < tu.lineY,
   },
@@ -38,8 +40,23 @@ const STEPS = [
     update: (game) => game.rings.every((r) => r.hit),
   },
   {
+    title: '뚝떨',
+    text: ['공중에서 {drop}을(를) 누르면 그 자리에 잠깐 멈췄다가 수직으로 뚝 떨어집니다.', '산탄으로 떠오른 뒤, 바닥의 금색 구역 위에서 {drop}을(를) 눌러 정확히 내려앉으세요.'],
+    setup(game, tu) { tu.zone = { x: 1050, w: 130 }; tu.dropped = false; },
+    update(game, tu) {
+      const p = game.player;
+      if (p.dropping || p.dropFreeze > 0) tu.dropped = true;
+      if (tu.dropped && p.grounded) {
+        tu.dropped = false;
+        if (Math.abs(p.x - tu.zone.x) < tu.zone.w / 2) return true;
+        game.banner('구역 밖입니다', '구역 바로 위에서 눌러 보세요', 1.0);
+      }
+      return false;
+    },
+  },
+  {
     title: '낙하 늦추기',
-    text: ['공중에서 좌클릭으로 아래를 쏘면 연사 반동으로 천천히 떨어집니다.', '산탄으로 뛰어오른 뒤, 아래로 연사하면서 공중에 머무르세요.'],
+    text: ['공중에서 {fire}(으)로 아래를 쏘면 연사 반동으로 천천히 떨어집니다.', '산탄으로 뛰어오른 뒤, 아래로 연사하면서 공중에 머무르세요.'],
     setup(game, tu) { tu.prog = 0; },
     bar: (game, tu) => tu.prog / 2,
     update(game, tu, dt) {
@@ -168,7 +185,7 @@ const STEPS = [
   },
   {
     title: '극딜 스킬',
-    text: ['과녁이 그로기로 바닥에 쓰러졌습니다. 극딜 게이지(오른쪽 아래)가 가득 찼습니다.', '과녁 가까이 붙은 뒤 F키를 누르고, 5초 동안 반동 없이 몰아서 쏘세요.'],
+    text: ['과녁이 그로기로 바닥에 쓰러졌습니다. 극딜 게이지(오른쪽 아래)가 가득 찼습니다.', '과녁 가까이 붙은 뒤 {ult}을(를) 누르고, 5초 동안 반동 없이 몰아서 쏘세요.'],
     setup(game, tu) {
       game.ult = 100;
       tu.used = false;
@@ -218,6 +235,7 @@ export class Tutorial {
     this.lineY = null;
     this.arrow = false;
     this.emitter = null;
+    this.zone = null;
     for (const h of game.hazards) h.dead = true;
     game.targets = [];
     game.rings = [];
@@ -295,7 +313,19 @@ export class Tutorial {
       g.beginPath(); g.moveTo(ax - 12, ay - 8); g.lineTo(ax + 12, ay - 8); g.lineTo(ax, ay + 6); g.closePath(); g.fill();
       g.textAlign = 'center';
       g.font = '500 13px "Noto Sans KR", sans-serif';
-      g.fillText('여기를 조준하고 우클릭', ax, ay + 26);
+      g.fillText(`여기를 조준하고 ${bindLabel('alt')}`, ax, ay + 26);
+    }
+    // 뚝떨 착지 구역
+    if (this.zone && !this.passed) {
+      const z = this.zone;
+      const a = 0.5 + 0.3 * Math.sin(t * 6);
+      g.fillStyle = `rgba(240,208,138,${a * 0.35})`;
+      g.fillRect(z.x - z.w / 2, ARENA.floor - 160, z.w, 160);
+      g.fillStyle = `rgba(240,208,138,${a + 0.2})`;
+      g.fillRect(z.x - z.w / 2, ARENA.floor - 5, z.w, 5);
+      g.beginPath();
+      const ay = ARENA.floor - 190 + Math.sin(t * 6) * 6;
+      g.moveTo(z.x - 14, ay); g.lineTo(z.x + 14, ay); g.lineTo(z.x, ay + 18); g.closePath(); g.fill();
     }
     // 고리
     for (const r of game.rings) {
@@ -361,7 +391,7 @@ export class Tutorial {
     g.fillText(st.title, x + 24, y + 56);
     g.font = '400 15px "Noto Sans KR", sans-serif';
     g.fillStyle = '#d8cfc4';
-    st.text.forEach((line, i) => g.fillText(line, x + 24, y + 82 + i * 22));
+    st.text.forEach((line, i) => g.fillText(fmt(line), x + 24, y + 82 + i * 22));
 
     // 진행도
     g.textAlign = 'right';

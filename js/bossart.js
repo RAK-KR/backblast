@@ -473,4 +473,103 @@ function drawDummy(b, g, t) {
   g.restore();
 }
 
-export const ART = { warden: drawWarden, bell: drawBell, brazier: drawBrazier, dummy: drawDummy };
+// ───── 4. 검은 태양: 불타는 코로나를 두른 일식 ─────
+function drawEclipse(b, g, t) {
+  const dead = b.state === 'dead';
+  if (dead && b.deadT > 2.6) return;
+  const bob = b.hovering ? Math.sin(t * 1.9) * 6 : 0;
+  const x = b.x, y = b.y + bob;
+  const red = b.phase === 2;
+  const coreCol = b.groggy ? '255,240,214' : red ? '255,60,110' : '255,206,140';
+  const R = b.r * 0.9;
+  shadow(b, g, x, y);
+
+  g.save();
+  g.translate(x, y);
+  g.rotate(b.open * 0.25);
+
+  // 코로나 (불꽃 가시) — 두 겹이 반대로 회전
+  const fade = b.groggy ? 0.35 : dead ? Math.max(0, 1 - b.deadT * 0.5) : 1;
+  const lenMul = (red ? 1.35 : 1) * fade;
+  g.globalCompositeOperation = 'lighter';
+  for (let layer = 0; layer < 2; layer++) {
+    const n = layer ? 18 : 24;
+    const rot = (layer ? -1 : 1) * t * (red ? 0.5 : 0.3);
+    for (let i = 0; i < n; i++) {
+      const a = rot + (i / n) * Math.PI * 2;
+      const L = R * (0.3 + 0.28 * Math.abs(Math.sin(t * 3 + i * 1.7 + layer))) * lenMul;
+      const wa = layer ? 0.1 : 0.07;
+      const r0 = R * 0.96;
+      g.fillStyle = layer
+        ? (red ? 'rgba(255,60,110,0.45)' : 'rgba(255,140,80,0.45)')
+        : 'rgba(255,214,150,0.55)';
+      g.beginPath();
+      g.moveTo(Math.cos(a - wa) * r0, Math.sin(a - wa) * r0);
+      g.lineTo(Math.cos(a) * (r0 + L), Math.sin(a) * (r0 + L));
+      g.lineTo(Math.cos(a + wa) * r0, Math.sin(a + wa) * r0);
+      g.closePath();
+      g.fill();
+    }
+  }
+  const halo = g.createRadialGradient(0, 0, R * 0.8, 0, 0, R * 2.1);
+  halo.addColorStop(0, `rgba(${coreCol},${0.5 * fade + 0.1})`);
+  halo.addColorStop(1, `rgba(${coreCol},0)`);
+  g.fillStyle = halo;
+  g.beginPath(); g.arc(0, 0, R * 2.1, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'source-over';
+
+  // 검은 원반
+  const disk = g.createRadialGradient(-R * 0.3, -R * 0.3, 4, 0, 0, R);
+  disk.addColorStop(0, '#22142a');
+  disk.addColorStop(1, '#07030a');
+  g.fillStyle = disk;
+  g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
+
+  // 일식 빛 테두리
+  g.shadowColor = `rgba(${coreCol},0.9)`;
+  g.shadowBlur = 18;
+  g.strokeStyle = '#fff2dc';
+  g.lineWidth = 3.5;
+  g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.stroke();
+  g.shadowBlur = 0;
+
+  // 균열 (2페이즈 / 그로기)
+  if (red || b.groggy) {
+    g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = `rgba(${coreCol},0.85)`;
+    g.lineWidth = 2;
+    for (const cr of [[[-20, -60], [-34, -36], [-24, -14]], [[30, 40], [48, 52], [42, 70]], [[50, -30], [62, -10]]]) {
+      g.beginPath();
+      cr.forEach(([px, py], j) => (j ? g.lineTo(px, py) : g.moveTo(px, py)));
+      g.stroke();
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+
+  // 눈
+  almondEye(b, g, 0, 0, b.groggy ? 20 : 15, b.groggy ? 18 : 14, coreCol, 10);
+
+  // 공전하는 작은 달 3개
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.1 + (i / 3) * Math.PI * 2;
+    const z = Math.sin(a);
+    const mx = Math.cos(a) * R * 1.55, my = z * R * 0.45 + (b.groggy ? 40 : 0);
+    g.globalAlpha = z > 0 ? 1 : 0.5;
+    g.fillStyle = '#1a0e1e';
+    g.beginPath(); g.arc(mx, my, z > 0 ? 11 : 8, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = `rgba(${coreCol},0.8)`;
+    g.lineWidth = 1.5;
+    g.beginPath(); g.arc(mx, my, z > 0 ? 11 : 8, -0.6, 1.2); g.stroke();
+    g.globalAlpha = 1;
+  }
+
+  if (b.hitFlash > 0) {
+    g.globalCompositeOperation = 'lighter';
+    g.fillStyle = `rgba(255,255,255,${b.hitFlash * 5})`;
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'source-over';
+  }
+  g.restore();
+}
+
+export const ART = { warden: drawWarden, bell: drawBell, brazier: drawBrazier, dummy: drawDummy, eclipse: drawEclipse };

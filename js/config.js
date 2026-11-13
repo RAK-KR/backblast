@@ -35,6 +35,12 @@ export const BOSS = {
   groggyRecoilMul: 0.3,   // 그로기 중 주무기 반동 배율 (산탄 반동은 그대로)
 };
 
+// 뚝떨: 공중에서 잠깐 멈췄다가 수직 낙하
+export const DROP = {
+  freeze: 0.1,       // 멈추는 시간(초)
+  speed: 1800,       // 낙하 속도
+};
+
 // 극딜 스킬 (궁극기)
 export const ULT = {
   duration: 5,       // 지속 시간(초)

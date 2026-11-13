@@ -10,6 +10,16 @@ export const RARITY = [
 ];
 
 export const PRIMARY = {
+  hellfire: {
+    name: '헬파이어', desc: '느리게 날아가는 대형 화염탄. 한 발 피해와 그로기 수치가 매우 큽니다.',
+    rate: 2.4, damage: 75, recoil: 320, heat: 0.12, spread: 0.01,
+    speed: 1250, stagger: 6, bullets: 1, size: 9,
+  },
+  splitter: {
+    name: '스플리터', desc: '한 번에 탄 3발을 부채꼴로 쏩니다. 가까이 붙어서 쏠수록 강합니다.',
+    rate: 6, damage: 11, recoil: 150, heat: 0.05, spread: 0.12,
+    speed: 2000, stagger: 0.8, bullets: 3, size: 3,
+  },
   rifle: {
     name: '기본 소총', desc: '무난한 연사. 아래로 쏘면 낙하를 늦출 수 있습니다.',
     rate: 11, damage: 14, recoil: 92, heat: 0.035, spread: 0.035,
@@ -70,6 +80,12 @@ export const ALT = {
     pellets: 11, damage: 15, recoil: 1150, shells: 2, spread: 0.34,
     speed: 1500, life: 0.22, stagger: 1.6,
   },
+  blink: {
+    name: '블링크 코어', desc: '조준한 방향으로 짧게 순간이동합니다. 이동하는 순간 잠깐 무적이 되고, 떠난 자리에 작은 폭발을 남깁니다.',
+    mode: 'blink', move: '순간이동',
+    pellets: 1, damage: 40, recoil: 0, shells: 2, spread: 0,
+    speed: 0, life: 0, stagger: 5, range: 290, carry: 420, iframes: 0.3,
+  },
   bounce: {
     name: '리바운더', desc: '쏘면 1.5초 동안 몸이 고무공처럼 되어 벽·바닥·천장에서 크게 튕깁니다. 탄도 벽에 한 번 튕깁니다.',
     mode: 'blast', move: '튕기는 몸',
@@ -122,7 +138,7 @@ function pickWeighted(weights) {
 }
 
 // tier: 보스 단계 (0=1단계, 1=2단계, 2=최종). 앞 단계일수록 높은 등급이 덜 나옴
-const TIER_SCALE = [[1, 0.8, 0.35, 0.15], [1, 1, 0.65, 0.45], [1, 1, 1, 1]];
+const TIER_SCALE = [[1, 0.8, 0.35, 0.15], [1, 1, 0.65, 0.45], [1, 1, 1, 1], [0.7, 1, 1.3, 1.7]];
 // 첫 처치 이후 드랍 확률 (등급별)
 export const DROP_CHANCE = { S: 0.45, A: 0.32, B: 0.25, C: 0.18 };
 

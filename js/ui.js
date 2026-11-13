@@ -2,6 +2,7 @@
 import { RARITY, weaponDef, weaponMul, DROP_CHANCE, PRIMARY, ALT, bestOwned } from './weapons.js';
 import { formatTime } from './game.js';
 import { BOSSES } from './bosses.js';
+import { ACTIONS, DEFAULT_BINDS, getBinds, setBinds, assignBind, clearBind, captureNext, keyName, bindLabel, lastCaptureAt } from './input.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -15,7 +16,7 @@ function el(tag, cls, html) {
 export function weaponPower(w) {
   const d = weaponDef(w);
   const m = weaponMul(w);
-  if (w.slot === 'primary') return d.damage * m * d.rate;
+  if (w.slot === 'primary') return d.damage * m * d.rate * (d.bullets || 1);
   if (d.mode === 'jet') return (d.damage * m) / d.tick;
   return d.damage * m * d.pellets;
 }
@@ -25,10 +26,10 @@ function statLines(w) {
   const m = weaponMul(w);
   if (w.slot === 'primary') {
     return [
-      ['피해', Math.round(d.damage * m)],
+      ['피해', (d.bullets || 1) > 1 ? `${Math.round(d.damage * m)} × ${d.bullets}` : Math.round(d.damage * m)],
       ['연사', `${d.rate}/s`],
       ['반동', d.recoil],
-      ['초당 피해', Math.round(d.damage * m * d.rate)],
+      ['초당 피해', Math.round(d.damage * m * d.rate * (d.bullets || 1))],
     ];
   }
   if (d.mode === 'jet') {
@@ -37,6 +38,14 @@ function statLines(w) {
       ['불꽃 피해', Math.round(d.damage * m)],
       ['연료', `${(1 / d.drain).toFixed(1)}초`],
       ['초당 피해', Math.round((d.damage * m) / d.tick)],
+    ];
+  }
+  if (d.mode === 'blink') {
+    return [
+      ['이동', d.move],
+      ['폭발 피해', Math.round(d.damage * m)],
+      ['장탄', d.shells],
+      ['거리', d.range],
     ];
   }
   if (d.mode === 'anchor') {
@@ -89,7 +98,8 @@ function weaponCard(w, opts = {}) {
 export class UI {
   constructor(handlers) {
     this.h = handlers;
-    this.screens = ['title', 'loadout', 'pause', 'result', 'help', 'stages'];
+    this.screens = ['title', 'loadout', 'pause', 'result', 'help', 'stages', 'keys'];
+    this.keysReturn = 'title';
     this.loadoutReturn = 'title';
 
     $('#btn-start').onclick = () => { this.h.sfx(); this.openStages(); };
@@ -97,7 +107,16 @@ export class UI {
     $('#btn-stages-loadout').onclick = () => { this.h.sfx(); this.openLoadout('stages'); };
     $('#btn-next').onclick = () => { this.h.sfx(); this.h.next(); };
     $('#btn-loadout').onclick = () => { this.h.sfx(); this.openLoadout('title'); };
-    $('#btn-help').onclick = () => { this.h.sfx(); this.show('help'); };
+    $('#btn-help').onclick = () => { this.h.sfx(); this.renderHelp(); this.show('help'); };
+    $('#btn-keys').onclick = () => { this.h.sfx(); this.openKeys('title'); };
+    $('#btn-pause-keys').onclick = () => { this.h.sfx(); this.openKeys('pause'); };
+    $('#btn-keys-back').onclick = () => { this.h.sfx(); this.show(this.keysReturn); };
+    $('#btn-keys-reset').onclick = () => {
+      this.h.sfx();
+      setBinds(DEFAULT_BINDS);
+      this.h.saveBinds();
+      this.renderKeys();
+    };
     $('#btn-help-back').onclick = () => { this.h.sfx(); this.show('title'); };
     $('#btn-loadout-back').onclick = () => { this.h.sfx(); this.show(this.loadoutReturn); };
     $('#btn-loadout-start').onclick = () => { this.h.sfx(); this.openStages(); };
@@ -153,6 +172,7 @@ export class UI {
   }
 
   show(name) {
+    this.cur = name;
     for (const s of this.screens) $(`#${s}`).classList.toggle('hidden', s !== name);
     document.body.classList.toggle('in-menu', !!name);
   }
@@ -162,6 +182,76 @@ export class UI {
   updateTitle(save) {
     const n = BOSSES.filter((b) => save.cleared[b.id]).length;
     $('#title-best').textContent = n ? `처치한 보스 ${n} / ${BOSSES.length} · 총 처치 ${save.clears}회` : '아직 처치한 보스가 없습니다';
+  }
+
+  renderHelp() {
+    const rows = [
+      ['마우스', '조준'],
+      [bindLabel('fire'), '주무기 연사 (누르고 있기) · 작은 반동'],
+      [bindLabel('alt'), '보조무기 · 조준한 방향으로 발사 (기본 산탄총은 반대쪽으로 튕겨 나감)'],
+      [bindLabel('drop'), '뚝떨 · 공중에서 그 자리에 0.1초 멈췄다가 수직으로 떨어짐'],
+      [bindLabel('ult'), '극딜 스킬 · 게이지가 가득 차면 5초 동안 반동 없이 무제한 사격'],
+      [bindLabel('restart'), '즉시 재시작'],
+      ['Esc', '일시정지'],
+    ];
+    const box = $('#help-list');
+    box.innerHTML = '';
+    for (const [k, v] of rows) {
+      const d = el('div');
+      d.append(el('b', '', k), el('span', '', v));
+      box.append(d);
+    }
+  }
+
+  openKeys(from) {
+    this.keysReturn = from;
+    this.renderKeys();
+    this.show('keys');
+  }
+
+  renderKeys() {
+    const list = $('#keys-list');
+    list.innerHTML = '';
+    const binds = getBinds();
+    for (const a of ACTIONS) {
+      const row = el('div', 'keys-row');
+      row.append(el('div', 'nm', a.name));
+      for (let slot = 0; slot < 2; slot++) {
+        const code = binds[a.id][slot];
+        const btn = el('div', `kslot ${code ? '' : 'empty'}`, code ? keyName(code) : '없음');
+        btn.onclick = () => {
+          // 직전 입력(마우스 버튼으로 지정할 때의 클릭)이 다시 칸을 누르는 것 방지
+          if (performance.now() - lastCaptureAt < 300) return;
+          this.h.sfx();
+          for (const k of list.querySelectorAll('.kslot.wait')) k.classList.remove('wait');
+          btn.classList.add('wait');
+          btn.textContent = '키를 누르세요';
+          captureNext((c) => {
+            if (c) {
+              assignBind(a.id, slot, c);
+              this.h.saveBinds();
+            }
+            this.renderKeys();
+          });
+        };
+        if (code) {
+          const x = el('span', 'x', '✕');
+          x.title = '지우기';
+          x.onclick = (e) => {
+            e.stopPropagation();
+            clearBind(a.id, slot);
+            this.h.saveBinds();
+            this.renderKeys();
+          };
+          btn.append(x);
+        }
+        row.append(btn);
+      }
+      list.append(row);
+    }
+    const esc = el('div', 'keys-row fixed');
+    esc.append(el('div', 'nm', '일시정지 (변경 불가)'), el('div', 'kslot', 'Esc'), el('div', 'kslot empty', ''));
+    list.append(esc);
   }
 
   openStages() {
@@ -181,8 +271,8 @@ export class UI {
       const unlocked = i === 0 || !!save.cleared[BOSSES[i - 1].id];
       const rec = save.records[b.id];
       const card = el('div', 'stage');
-      const stars = '◆'.repeat(b.stars) + `<i>${'◆'.repeat(3 - b.stars)}</i>`;
-      card.innerHTML = `<div class="no">${i === BOSSES.length - 1 ? 'FINAL' : `STAGE ${i + 1}`}</div>
+      const stars = '◆'.repeat(b.stars) + `<i>${'◆'.repeat(Math.max(0, 4 - b.stars))}</i>`;
+      card.innerHTML = `<div class="no">${b.label || `STAGE ${i + 1}`}</div>
         <div class="name">${b.name}</div><div class="sub">${b.title}</div>
         <div class="stars">${stars}</div>
         <div class="desc">${b.desc}</div>

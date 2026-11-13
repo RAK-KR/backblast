@@ -1,6 +1,6 @@
 // 보스 공통 동작. 보스별 수치와 패턴 목록은 bosses.js, 그림은 bossart.js
 import { ARENA, BOSS, DMG } from './config.js';
-import { laserH, laserV, shock, orb, mine } from './hazards.js';
+import { laserH, laserV, shock, orb, mine, colwarn } from './hazards.js';
 import { ART } from './bossart.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -151,6 +151,7 @@ export class Boss {
       }
       case 'phase': {
         this.x += Math.sin(this.timer * 70) * 2;
+        this.y += (Math.min(this.y, 300) - this.y) * Math.min(1, dt * 3); // 바닥에 있었다면 떠오름
         if (this.timer > 1.3) { this.pickAnchor(p); this.setState('move'); }
         break;
       }
@@ -159,6 +160,8 @@ export class Boss {
       case 'radial': this.doRadial(dt, game); break;
       case 'mines': this.doMines(dt, game); break;
       case 'charge': this.doCharge(dt, game); break;
+      case 'rain': this.doRain(dt, game); break;
+      case 'spiral': this.doSpiral(dt, game); break;
       case 'groggy': this.doGroggy(dt, game); break;
       case 'dead': this.doDead(dt, game); break;
       default:
@@ -316,6 +319,65 @@ export class Boss {
     }
   }
 
+  // 탄비: 천장에서 기둥 모양으로 탄이 떨어짐. 빈 기둥(틈)으로 피해야 함
+  doRain(dt, game) {
+    const p = game.player;
+    const c = this.cfg.rain;
+    if (this.step === 0) {
+      this.step = 1;
+      const colW = (ARENA.right - ARENA.left) / c.cols;
+      for (let w = 0; w < c.waves; w++) {
+        const xs = [];
+        this.schedule(w * c.gap, () => {
+          const gapStart = Math.floor(Math.random() * (c.cols - c.gapCols + 1));
+          for (let i = 0; i < c.cols; i++) {
+            if (i >= gapStart && i < gapStart + c.gapCols) continue;
+            const x = ARENA.left + colW * (i + 0.5);
+            xs.push(x);
+            game.hazards.push(colwarn(x, colW, c.tele));
+          }
+          game.sfx.telegraph();
+        });
+        this.schedule(w * c.gap + c.tele, () => {
+          for (const x of xs) {
+            for (let k = 0; k < 2; k++) this.push(game, orb(x, ARENA.top + 8 - k * 60, 0, c.speed, 11));
+          }
+          game.sfx.orb();
+          game.fx.shake(6);
+        });
+      }
+      this.endAt = (c.waves - 1) * c.gap + c.tele + 1.2;
+    }
+    this.y += (ARENA.top + this.r + 70 - this.y) * Math.min(1, dt * 2);
+    this.runQueue();
+    if (this.timer >= this.endAt) { this.pickAnchor(p); this.setState('move'); }
+  }
+
+  // 나선 탄막: 회전하며 계속 쏨
+  doSpiral(dt, game) {
+    const p = game.player;
+    const c = this.cfg.spiral;
+    if (this.step === 0) {
+      this.step = 1;
+      this.spinA = Math.random() * Math.PI * 2;
+      this.spinT = 0.4;
+      this.endAt = c.dur + 0.8;
+    }
+    this.x += (800 - this.x) * Math.min(1, dt * 1.5);
+    this.y += (300 - this.y) * Math.min(1, dt * 1.5);
+    this.spinT -= dt;
+    if (this.timer < c.dur && this.spinT <= 0) {
+      this.spinT = c.interval;
+      for (let k = 0; k < c.arms; k++) {
+        const a = this.spinA + (k / c.arms) * Math.PI * 2;
+        this.push(game, orb(this.x + Math.cos(a) * this.r * 0.7, this.y + Math.sin(a) * this.r * 0.7, Math.cos(a) * c.speed, Math.sin(a) * c.speed, 9));
+      }
+      this.spinA += c.turn;
+      game.sfx.orb();
+    }
+    if (this.timer >= this.endAt) { this.pickAnchor(p); this.setState('move'); }
+  }
+
   enterGroggy(game) {
     this.setState('groggy');
     this.groggyT = this.def.groggyTime || BOSS.groggyTime;
@@ -386,14 +448,26 @@ export class Boss {
 
   takeDamage(dmg, stagger, hx, hy, game) {
     if (this.state === 'dead' || this.state === 'intro' || this.hidden) return 0;
+    if (this.state === 'phase') return 0; // 페이즈 전환 연출 중에는 무적
     const mul = this.groggy ? BOSS.groggyDamageMul : 1;
-    const d = dmg * mul;
+    let d = dmg * mul;
+
+    // 1페이즈에서는 체력이 페이즈 기준선 아래로 내려가지 않음 → 도달하면 강제로 2페이즈
+    const thr = this.def.phase2At ? this.maxHp * this.def.phase2At : -1;
+    const forcePhase = this.phase === 1 && thr > 0 && this.hp - d <= thr;
+    if (forcePhase) d = Math.max(0, this.hp - thr);
+
     this.hp -= d;
     this.sinceHit = 0;
     this.hitFlash = 0.05;
-    if (!this.groggy && this.state !== 'phase') this.stagger += stagger;
-    game.onBossDamage(d, hx, hy, this.groggy);
+    if (!this.groggy && !forcePhase) this.stagger += stagger;
+    if (d > 0) game.onBossDamage(d, hx, hy, this.groggy);
 
+    if (forcePhase) {
+      this.hp = thr;
+      this.enterPhase2(game);
+      return d;
+    }
     if (this.hp <= 0) {
       this.hp = 0;
       this.setState('dead');
@@ -403,19 +477,26 @@ export class Boss {
       game.onBossDead();
       return d;
     }
-    if (this.def.phase2At && this.phase === 1 && this.hp <= this.maxHp * this.def.phase2At && !this.groggy) {
-      this.phase = 2;
-      this.setState('phase');
-      for (const h of game.hazards) if ((h.type === 'laserH' || h.type === 'laserV') && !h.fired) h.dead = true;
-      game.sfx.groggy();
-      game.fx.shake(20);
-      game.fx.doFlash(0.3, '255,54,100');
-      game.fx.ring(this.x, this.y, this.r, this.r + 300, 0.7, '255,54,100', 12);
-      game.banner('PHASE 2', `${this.name}이(가) 폭주합니다`, 1.6);
-      return d;
-    }
     if (!this.groggy && this.stagger >= this.staggerMax) this.enterGroggy(game);
     return d;
+  }
+
+  enterPhase2(game) {
+    // 그로기 중이었다면 바로 풀림 (극딜 누적은 정산)
+    if (this.groggy) {
+      game.endBurst();
+      this.grounded = false;
+    }
+    this.stagger = 0;
+    this.phase = 2;
+    this.setState('phase');
+    this.vy = 0;
+    for (const h of game.hazards) if ((h.type === 'laserH' || h.type === 'laserV') && !h.fired) h.dead = true;
+    game.sfx.groggy();
+    game.fx.shake(20);
+    game.fx.doFlash(0.3, '255,54,100');
+    game.fx.ring(this.x, this.y, this.r, this.r + 300, 0.7, '255,54,100', 12);
+    game.banner('PHASE 2', `${this.name}이(가) 폭주합니다`, 1.6);
   }
 
   drawTelegraph(g, t) {

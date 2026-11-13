@@ -23,6 +23,7 @@
           <button id="btn-start" class="btn primary">시작</button>
           <button id="btn-loadout" class="btn">장비</button>
           <button id="btn-help" class="btn">조작법</button>
+          <button id="btn-keys" class="btn">키 설정</button>
         </div>
         <div id="title-best" class="best"></div>
         <div class="settings">
@@ -45,21 +46,27 @@
       </div>
     </section>
 
+    <!-- 키 설정 -->
+    <section id="keys" class="screen hidden">
+      <div class="panel narrow">
+        <h2>키 설정</h2>
+        <p class="keys-note">칸을 누른 뒤 원하는 키나 마우스 버튼을 누르세요. Esc를 누르면 취소됩니다. 행동마다 키를 2개까지 지정할 수 있습니다.</p>
+        <div id="keys-list" class="keys-list"></div>
+        <div class="row">
+          <button id="btn-keys-reset" class="btn">기본값으로</button>
+          <button id="btn-keys-back" class="btn primary">완료</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 조작법 -->
     <section id="help" class="screen hidden">
       <div class="panel narrow">
         <h2>조작법</h2>
-        <div class="help-list">
-          <div><b>마우스</b><span>조준</span></div>
-          <div><b>좌클릭 (누르고 있기)</b><span>주무기 연사 · 작은 반동</span></div>
-          <div><b>우클릭 / Space</b><span>보조무기 · 조준한 방향으로 발사 (기본 산탄총은 반대쪽으로 튕겨 나감)</span></div>
-          <div><b>F</b><span>극딜 스킬 · 게이지가 가득 차면 5초 동안 반동 없이 무제한 사격</span></div>
-          <div><b>R</b><span>즉시 재시작</span></div>
-          <div><b>Esc</b><span>일시정지</span></div>
-        </div>
+        <div id="help-list" class="help-list"></div>
         <h3>규칙</h3>
         <ul class="rules">
-          <li>처음이라면 스테이지 화면의 튜토리얼부터 해 보세요.</li>
+          <li>처음이라면 스테이지 화면의 튜토리얼부터 해 보세요. 키는 타이틀·일시정지 화면의 키 설정에서 바꿀 수 있습니다.</li>
           <li>걷기와 점프가 없습니다. 총을 쏜 반동으로만 움직입니다.</li>
           <li>산탄은 바닥에 닿으면 전부 충전되고, 공중에서는 천천히 1발씩 충전됩니다.</li>
           <li>주무기는 계속 쏘면 과열됩니다. 아래로 쏘면 낙하 속도를 늦출 수 있습니다.</li>
@@ -105,6 +112,7 @@
         <div class="menu">
           <button id="btn-resume" class="btn primary">계속하기</button>
           <button id="btn-restart" class="btn">다시 시작</button>
+          <button id="btn-pause-keys" class="btn">키 설정</button>
           <button id="btn-quit" class="btn">타이틀로</button>
         </div>
         <div class="settings">

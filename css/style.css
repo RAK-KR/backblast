@@ -185,7 +185,8 @@ h3 small { font-family: var(--body); font-size: 12px; color: var(--dim); letter-
 @keyframes reveal { 0% { transform: scale(0.82) rotateY(70deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
 
 /* ── 스테이지 선택 ── */
-.stage-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+.stage-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 24px; }
+.stage .name { font-size: 22px !important; }
 .stage {
   position: relative; min-height: 300px; padding: 22px 20px 20px;
   background: linear-gradient(170deg, rgba(48, 18, 42, 0.92), rgba(14, 4, 14, 0.96));
@@ -220,6 +221,22 @@ h3 small { font-family: var(--body); font-size: 12px; color: var(--dim); letter-
 .stage .loot::before { content: "드랍"; font-size: 11px; color: var(--dim); letter-spacing: 1px; width: 100%; }
 .stage .loot span { font-size: 12px; padding: 2px 8px; border: 1px solid rgba(255, 255, 255, 0.12); }
 .stage .loot span.unk { color: rgba(255, 255, 255, 0.3); border-style: dashed; }
+
+/* ── 키 설정 ── */
+.keys-note { font-size: 13px; color: var(--dim); margin-top: 12px; line-height: 1.6; }
+.keys-list { margin-top: 18px; border-top: 1px solid var(--line); }
+.keys-row { display: grid; grid-template-columns: 1fr 160px 160px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(201, 163, 90, 0.15); }
+.keys-row .nm { font-size: 15px; }
+.keys-row.fixed .nm, .keys-row.fixed .kslot { opacity: 0.55; }
+.kslot { position: relative; height: 36px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--body); font-size: 14px; color: var(--bone); background: rgba(30, 12, 28, 0.7);
+  border: 1px solid var(--line); cursor: pointer; }
+.kslot:hover { border-color: var(--gold-hi); }
+.kslot.empty { color: rgba(255, 255, 255, 0.3); }
+.kslot.wait { border-color: var(--crimson-hi); color: var(--crimson-hi); animation: kwait 0.8s ease-in-out infinite; }
+@keyframes kwait { 50% { background: rgba(120, 20, 50, 0.5); } }
+.kslot .x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--dim); padding: 2px 4px; }
+.kslot .x:hover { color: var(--crimson-hi); }
 
 /* 메뉴 표시 중엔 화면 클릭이 캔버스로 안 가게 */
 body:not(.in-menu) .screen { pointer-events: none; }
