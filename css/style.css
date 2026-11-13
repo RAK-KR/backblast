@@ -209,5 +209,15 @@ h3 small { font-family: var(--body); font-size: 12px; color: var(--dim); letter-
 .stage .lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
   font-size: 14px; color: var(--bone); letter-spacing: 1px; background: rgba(8, 2, 10, 0.82); padding: 20px; }
 
+/* 드랍 표시 */
+.drop-note { font-size: 13px; color: var(--dim); margin-bottom: 12px; letter-spacing: 0.5px; }
+.wcard-tag { position: absolute; right: 12px; top: -10px; font-size: 11px; letter-spacing: 2px; padding: 2px 9px; color: var(--ink); }
+.wcard-tag.new { background: var(--gold-hi); }
+.wcard-tag.up { background: var(--crimson-hi); color: var(--bone); }
+.stage .loot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.stage .loot::before { content: "드랍"; font-size: 11px; color: var(--dim); letter-spacing: 1px; width: 100%; }
+.stage .loot span { font-size: 12px; padding: 2px 8px; border: 1px solid rgba(255, 255, 255, 0.12); }
+.stage .loot span.unk { color: rgba(255, 255, 255, 0.3); border-style: dashed; }
+
 /* 메뉴 표시 중엔 화면 클릭이 캔버스로 안 가게 */
 body:not(.in-menu) .screen { pointer-events: none; }

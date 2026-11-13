@@ -32,28 +32,53 @@ export const PRIMARY = {
   },
 };
 
+// mode: blast(반동으로 튕김, 기본) / anchor(갈고리로 끌려감) / jet(누르는 동안 분사)
 export const ALT = {
   scatter: {
-    name: '기본 산탄총', desc: '7발 산탄. 반동으로 크게 튀어 오릅니다.',
+    name: '기본 산탄총', desc: '7발 산탄. 쏜 반대 방향으로 크게 튕겨 나갑니다.',
+    mode: 'blast', move: '반동 점프',
     pellets: 7, damage: 12, recoil: 1050, shells: 2, spread: 0.24,
     speed: 1700, life: 0.42, stagger: 1.4,
   },
-  slug: {
-    name: '슬러그 캐논', desc: '단발 대구경. 그로기 게이지를 크게 채웁니다.',
-    pellets: 1, damage: 120, recoil: 1250, shells: 1, spread: 0,
-    speed: 2300, life: 0.9, stagger: 14,
-  },
   twin: {
-    name: '트윈 블래스터', desc: '반동은 약하지만 세 번까지 연속으로 쏠 수 있습니다.',
+    name: '트윈 블래스터', desc: '반동은 약하지만 세 번까지 연속으로 쏠 수 있어 짧게 끊어 움직입니다.',
+    mode: 'blast', move: '짧은 3단 점프',
     pellets: 5, damage: 10, recoil: 820, shells: 3, spread: 0.2,
     speed: 1700, life: 0.4, stagger: 1.1,
   },
+  anchor: {
+    name: '앵커 건', desc: '조준한 곳에 갈고리를 박고 그쪽으로 끌려갑니다. 반동과 반대로, 조준한 방향으로 날아갑니다. 보스에 박으면 피해와 함께 보스에게 붙습니다.',
+    mode: 'anchor', move: '갈고리 당기기',
+    pellets: 1, damage: 45, recoil: 0, shells: 2, spread: 0,
+    speed: 2800, range: 1250, pullSpeed: 1450, life: 0.6, stagger: 8,
+  },
+  slug: {
+    name: '슬러그 캐논', desc: '단발 대구경. 한 방에 아주 멀리 날아가고 그로기 게이지를 크게 채웁니다.',
+    mode: 'blast', move: '한 방 장거리 점프',
+    pellets: 1, damage: 120, recoil: 1250, shells: 1, spread: 0,
+    speed: 2300, life: 0.9, stagger: 14,
+  },
+  jet: {
+    name: '분사기', desc: '누르고 있는 동안 조준 반대 방향으로 계속 분사해 공중에 떠 있을 수 있습니다. 가까이 있는 적을 불꽃으로 태웁니다. 바닥에 닿으면 연료가 찹니다.',
+    mode: 'jet', move: '지속 비행',
+    pellets: 1, damage: 9, recoil: 0, shells: 0, spread: 0.18,
+    speed: 900, life: 0.22, stagger: 0.5, thrust: 2350, drain: 0.6, tick: 0.05,
+  },
   flak: {
-    name: '플랙 버스터', desc: '사거리가 짧은 대신 근접에서 엄청난 딜이 들어갑니다.',
+    name: '플랙 버스터', desc: '사거리가 짧은 대신 근접에서 엄청난 피해가 들어갑니다.',
+    mode: 'blast', move: '반동 점프',
     pellets: 11, damage: 15, recoil: 1150, shells: 2, spread: 0.34,
     speed: 1500, life: 0.22, stagger: 1.6,
   },
+  bounce: {
+    name: '리바운더', desc: '쏘면 1.5초 동안 몸이 고무공처럼 되어 벽·바닥·천장에서 크게 튕깁니다. 탄도 벽에 한 번 튕깁니다.',
+    mode: 'blast', move: '튕기는 몸',
+    pellets: 6, damage: 12, recoil: 950, shells: 2, spread: 0.22,
+    speed: 1700, life: 0.6, stagger: 1.3, bounceTime: 1.5, bulletBounce: 1,
+  },
 };
+
+export const slotOf = (id) => (PRIMARY[id] ? 'primary' : 'alt');
 
 let uidCounter = Date.now() % 100000;
 const newUid = () => `w${(uidCounter++).toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
@@ -98,21 +123,44 @@ function pickWeighted(weights) {
 
 // tier: 보스 단계 (0=1단계, 1=2단계, 2=최종). 앞 단계일수록 높은 등급이 덜 나옴
 const TIER_SCALE = [[1, 0.8, 0.35, 0.15], [1, 1, 0.65, 0.45], [1, 1, 1, 1]];
+// 첫 처치 이후 드랍 확률 (등급별)
+export const DROP_CHANCE = { S: 0.45, A: 0.32, B: 0.25, C: 0.18 };
 
-export function rollDrops(grade, tier = 2) {
-  const count = grade === 'S' ? 2 : 1;
-  const drops = [];
-  for (let i = 0; i < count; i++) {
-    const slot = Math.random() < 0.5 ? 'primary' : 'alt';
-    const pool = Object.keys(slot === 'primary' ? PRIMARY : ALT);
-    const id = pool[Math.floor(Math.random() * pool.length)];
-    const base = RARITY_TABLE[grade] || RARITY_TABLE.C;
-    const sc = TIER_SCALE[tier] || TIER_SCALE[2];
-    const wts = base.map((w, j) => w * sc[j]);
-    const sum = wts.reduce((a, b) => a + b, 0);
-    const rarity = pickWeighted(wts.map((w) => w / sum));
-    const quality = 0.94 + Math.random() * 0.12;
-    drops.push(makeWeapon(slot, id, rarity, quality));
+function rollRarity(grade, tier) {
+  const base = RARITY_TABLE[grade] || RARITY_TABLE.C;
+  const sc = TIER_SCALE[tier] || TIER_SCALE[2];
+  const wts = base.map((w, j) => w * sc[j]);
+  const sum = wts.reduce((a, b) => a + b, 0);
+  return pickWeighted(wts.map((w) => w / sum));
+}
+
+// 보유한 같은 무기 중 가장 높은 등급 (없으면 -1)
+export function bestOwned(inventory, id) {
+  let best = -1;
+  for (const w of inventory) if (w.id === id && w.rarity > best) best = w.rarity;
+  return best;
+}
+
+// 보스 처치 드랍. 결과: { drops: [{ weapon, kind: 'new' | 'upgrade' }], chance }
+export function rollBossDrop(def, grade, inventory, firstClear) {
+  const chance = firstClear ? 1 : (DROP_CHANCE[grade] || DROP_CHANCE.C);
+  const loot = def.loot || [];
+  if (!loot.length || Math.random() > chance) return { drops: [], chance };
+  const unowned = loot.filter((id) => bestOwned(inventory, id) < 0);
+  let id;
+  let rarity = rollRarity(grade, def.tier);
+  let kind = 'new';
+  if (unowned.length) {
+    id = unowned[Math.floor(Math.random() * unowned.length)];
+  } else {
+    // 모두 가지고 있으면 더 높은 등급만 나옴
+    const up = loot.filter((x) => bestOwned(inventory, x) < RARITY.length - 1);
+    if (!up.length) return { drops: [], chance, complete: true };
+    id = up[Math.floor(Math.random() * up.length)];
+    const owned = bestOwned(inventory, id);
+    if (rarity <= owned) rarity = owned + 1;
+    kind = 'upgrade';
   }
-  return drops;
+  const quality = 0.94 + Math.random() * 0.12;
+  return { drops: [{ weapon: makeWeapon(slotOf(id), id, rarity, quality), kind }], chance };
 }

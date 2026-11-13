@@ -6,7 +6,7 @@ import { UI } from './ui.js';
 import { input, initInput, setMapper, endFrame, setSensitivity, lockPointer, unlockPointer, isLocked } from './input.js';
 import { initAudio, setVolume, sfx } from './audio.js';
 import { loadSave, writeSave } from './save.js';
-import { rollDrops } from './weapons.js';
+import { rollBossDrop } from './weapons.js';
 import { BOSSES } from './bosses.js';
 
 const canvas = document.getElementById('game');
@@ -98,19 +98,21 @@ game.onEnd = (win, stats) => {
   const def = BOSSES[current];
   const hasNext = current < BOSSES.length - 1;
   if (!win) {
-    ui.showResult(false, stats, 'C', [], false, false);
+    ui.showResult(false, stats, 'C', null, false, false);
     return;
   }
   const grade = gradeOf(stats, def);
-  const drops = rollDrops(grade, def.tier);
-  for (const d of drops) save.inventory.push(d);
+  const firstClear = !save.cleared[def.id];
+  const res = rollBossDrop(def, grade, save.inventory, firstClear);
+  res.first = firstClear;
+  for (const d of res.drops) save.inventory.push(d.weapon);
   save.clears++;
   save.cleared[def.id] = true;
   let isBest = false;
   const rec = save.records[def.id];
   if (!rec || stats.time < rec.time) { save.records[def.id] = { time: stats.time, grade }; isBest = true; }
   writeSave(save);
-  ui.showResult(true, stats, grade, drops, isBest, hasNext);
+  ui.showResult(true, stats, grade, res, isBest, hasNext);
 };
 
 game.onTutorialDone = () => {
@@ -187,4 +189,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // 테스트용 핸들
-window.__bb = { game, getSave: () => save, startStage };
+window.__bb = { game, input, getSave: () => save, startStage };

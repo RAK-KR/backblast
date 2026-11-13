@@ -1,5 +1,5 @@
 // 메뉴 화면 (타이틀 / 장비 / 일시정지 / 결과·드랍)
-import { RARITY, weaponDef, weaponMul } from './weapons.js';
+import { RARITY, weaponDef, weaponMul, DROP_CHANCE, PRIMARY, ALT, bestOwned } from './weapons.js';
 import { formatTime } from './game.js';
 import { BOSSES } from './bosses.js';
 
@@ -16,6 +16,7 @@ export function weaponPower(w) {
   const d = weaponDef(w);
   const m = weaponMul(w);
   if (w.slot === 'primary') return d.damage * m * d.rate;
+  if (d.mode === 'jet') return (d.damage * m) / d.tick;
   return d.damage * m * d.pellets;
 }
 
@@ -30,11 +31,27 @@ function statLines(w) {
       ['초당 피해', Math.round(d.damage * m * d.rate)],
     ];
   }
+  if (d.mode === 'jet') {
+    return [
+      ['이동', d.move],
+      ['불꽃 피해', Math.round(d.damage * m)],
+      ['연료', `${(1 / d.drain).toFixed(1)}초`],
+      ['초당 피해', Math.round((d.damage * m) / d.tick)],
+    ];
+  }
+  if (d.mode === 'anchor') {
+    return [
+      ['이동', d.move],
+      ['갈고리 피해', Math.round(d.damage * m)],
+      ['장탄', d.shells],
+      ['사거리', d.range],
+    ];
+  }
   return [
+    ['이동', d.move],
     ['피해', d.pellets > 1 ? `${Math.round(d.damage * m)} × ${d.pellets}` : Math.round(d.damage * m)],
     ['장탄', d.shells],
     ['반동', d.recoil],
-    ['한 발 총합', Math.round(d.damage * m * d.pellets)],
   ];
 }
 
@@ -65,6 +82,7 @@ function weaponCard(w, opts = {}) {
     card.append(el('div', `wcard-compare ${cls}`, txt));
   }
   if (opts.equipped) card.append(el('div', 'wcard-badge', '장착 중'));
+  if (opts.tag) card.append(el('div', `wcard-tag ${opts.tagCls || ''}`, opts.tag));
   return card;
 }
 
@@ -163,6 +181,11 @@ export class UI {
         <div class="name">${b.name}</div><div class="sub">${b.title}</div>
         <div class="stars">${stars}</div>
         <div class="desc">${b.desc}</div>
+        <div class="loot">${(b.loot || []).map((id) => {
+          const own = bestOwned(save.inventory, id);
+          const nm = (PRIMARY[id] || ALT[id]).name;
+          return own >= 0 ? `<span style="color:${RARITY[own].color}">${nm}</span>` : `<span class="unk">${nm}</span>`;
+        }).join('')}</div>
         <div class="rec ${rec ? '' : 'none'}">${rec ? `최고 ${formatTime(rec.time)} · ${rec.grade} 등급` : '기록 없음'}</div>`;
       if (!unlocked) {
         card.classList.add('locked');
@@ -244,12 +267,24 @@ export class UI {
     }
 
     const dropBox = $('#result-drops');
+    const dropNote = $('#drop-note');
     dropBox.innerHTML = '';
+    dropNote.textContent = '';
     this.pendingDrops = [];
-    if (win && drops.length) {
-      $('#drop-section').style.display = '';
-      $('#btn-reveal-all').style.display = '';
-      drops.forEach((w, i) => {
+    const res = drops || { drops: [] };
+    const list = res.drops || [];
+    $('#drop-section').style.display = win ? '' : 'none';
+    $('#btn-reveal-all').style.display = list.length > 1 ? '' : 'none';
+    const chanceText = `다시 잡으면 드랍 확률 S ${DROP_CHANCE.S * 100}% · A ${DROP_CHANCE.A * 100}% · B ${DROP_CHANCE.B * 100}% · C ${DROP_CHANCE.C * 100}%`;
+    if (win && !list.length) {
+      dropNote.textContent = res.complete
+        ? '이 보스의 무기를 모두 최고 등급으로 모았습니다.'
+        : `이번에는 드랍이 없습니다. ${chanceText}`;
+    } else if (win) {
+      dropNote.textContent = res.first ? `첫 처치 보상 · ${chanceText}` : chanceText;
+    }
+    if (win && list.length) {
+      list.forEach(({ weapon: w, kind }) => {
         const slot = el('div', 'drop-slot');
         const back = el('div', 'drop-back', '<span>?</span><em>클릭해서 확인</em>');
         back.style.setProperty('--rc', RARITY[w.rarity].color);
@@ -261,9 +296,17 @@ export class UI {
           slot.dataset.open = '1';
           this.h.dropSfx(w.rarity);
           const save = this.h.getSave();
-          const eq = save.inventory.find((x) => x.uid === save.equip[w.slot]);
-          const diff = eq ? (weaponPower(w) / weaponPower(eq) - 1) * 100 : 0;
-          const card = weaponCard(w, { compare: diff });
+          // 등급 상승이면 같은 무기의 이전 최고 등급과 비교
+          let compare;
+          if (kind === 'upgrade') {
+            const prev = save.inventory.filter((x) => x.id === w.id && x.uid !== w.uid).sort((a, b) => b.rarity - a.rarity)[0];
+            if (prev) compare = (weaponPower(w) / weaponPower(prev) - 1) * 100;
+          }
+          const card = weaponCard(w, {
+            compare,
+            tag: kind === 'upgrade' ? '등급 상승' : '새 무기',
+            tagCls: kind === 'upgrade' ? 'up' : 'new',
+          });
           card.classList.add('reveal');
           const btn = el('button', 'btn small', '바로 장착');
           btn.onclick = () => {
@@ -278,10 +321,7 @@ export class UI {
         };
         back.onclick = reveal;
         this.pendingDrops.push(reveal);
-        void i;
       });
-    } else {
-      $('#drop-section').style.display = 'none';
     }
     this.show('result');
   }

@@ -180,6 +180,20 @@ export const sfx = {
     if (rarity >= 2) setTimeout(() => ctx && thump(base * 2, base * 2, 1.0, 0.3, 'triangle'), 220);
     noise(0.5, 500, 0.8, 0.3, 120);
   },
+  jet() {
+    if (!ctx || throttle('jet', 90)) return;
+    noise(0.12, 700, 0.6, 0.22, 250);
+  },
+  hook() {
+    if (!ctx) return;
+    noise(0.08, 1200, 3, 0.25, 500, 'bandpass');
+    thump(160, 90, 0.08, 0.3, 'triangle');
+  },
+  latch() {
+    if (!ctx) return;
+    noise(0.1, 800, 2, 0.35, 300, 'bandpass');
+    thump(120, 60, 0.12, 0.45, 'triangle');
+  },
   ui() {
     if (!ctx || throttle('ui', 60)) return;
     thump(180, 120, 0.05, 0.2, 'triangle');

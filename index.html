@@ -52,7 +52,7 @@
         <div class="help-list">
           <div><b>마우스</b><span>조준</span></div>
           <div><b>좌클릭 (누르고 있기)</b><span>주무기 연사 · 작은 반동</span></div>
-          <div><b>우클릭 / Space</b><span>산탄 발사 · 쏜 반대 방향으로 크게 튕겨 나감</span></div>
+          <div><b>우클릭 / Space</b><span>보조무기 · 이동 수단 (기본 산탄총은 쏜 반대 방향으로 튕겨 나감)</span></div>
           <div><b>F</b><span>극딜 스킬 · 게이지가 가득 차면 5초 동안 반동 없이 무제한 사격</span></div>
           <div><b>R</b><span>즉시 재시작</span></div>
           <div><b>Esc</b><span>일시정지</span></div>
@@ -66,7 +66,8 @@
           <li>보스를 때리면 그로기 게이지가 찹니다. 산탄과 묵직한 무기가 잘 채웁니다.</li>
           <li>그로기 중에는 받는 피해가 2배가 되고, 주무기 반동이 줄어듭니다. 산탄 반동은 그대로라 산탄으로 보스에게 바로 붙을 수 있습니다.</li>
           <li>기뢰는 쏘면 터집니다. 보스 근처에서 터뜨리면 큰 피해와 그로기가 들어갑니다.</li>
-          <li>보스를 잡으면 무기가 드랍됩니다. 빠르고 적게 맞을수록, 뒤 단계 보스일수록 좋은 등급이 나옵니다.</li>
+          <li>보스마다 떨어뜨리는 전용 무기가 3종씩 있고, 보조무기는 종류마다 이동 방식이 다릅니다 (반동, 갈고리, 분사, 튕김 등).</li>
+          <li>보스를 처음 잡으면 무기가 확정으로 나오고, 그다음부터는 등급에 따라 확률로 나옵니다. 이미 가진 무기는 더 높은 등급으로만 나옵니다.</li>
           <li>전투 중에는 마우스 커서가 화면에 고정됩니다. Esc를 누르면 풀리고 일시정지됩니다.</li>
         </ul>
         <div class="row">
@@ -124,6 +125,7 @@
         <div id="result-stats" class="result-stats"></div>
         <div id="drop-section">
           <h3>드랍 <button id="btn-reveal-all" class="btn small ghost">모두 확인</button></h3>
+          <div id="drop-note" class="drop-note"></div>
           <div id="result-drops" class="drops"></div>
         </div>
         <div class="row">

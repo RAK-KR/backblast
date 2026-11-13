@@ -17,6 +17,7 @@ export const BOSSES = [
     phase2At: null,   // 1·2단계는 페이즈 변화 없음
     gradeTimes: [40, 60, 90],
     tier: 0,
+    loot: ['anchor', 'twin', 'needle'],   // 이 보스만 떨어뜨리는 무기
     p1: {
       rest: 1.7,
       pool: ['slam', 'radial', 'slam', 'radial'],
@@ -39,6 +40,7 @@ export const BOSSES = [
     phase2At: null,
     gradeTimes: [55, 80, 115],
     tier: 1,
+    loot: ['jet', 'slug', 'repeater'],
     p1: {
       rest: 1.4,
       pool: ['sweep', 'mines', 'radial', 'slam', 'sweep'],
@@ -63,6 +65,7 @@ export const BOSSES = [
     phase2At: 0.5,
     gradeTimes: [70, 100, 140],
     tier: 2,
+    loot: ['bounce', 'flak', 'lance'],
     p1: {
       rest: 1.2,
       pool: ['sweep', 'slam', 'radial', 'mines', 'sweep', 'radial'],

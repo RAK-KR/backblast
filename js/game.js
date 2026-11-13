@@ -25,6 +25,8 @@ export class Game {
     this.tutorial = null;
     this.targets = [];
     this.rings = [];
+    this.hook = null;
+    this.hookPoint = null;
     this.mode = 'boss';
     this.hazards = [];
     this.bullets = [];
@@ -178,8 +180,11 @@ export class Game {
     const recoilMul = p.ultActive ? 0 : groggy ? BOSS.groggyRecoilMul : 1;
     const altRecoilMul = p.ultActive ? 0 : 1;
     const heatMul = p.ultActive ? 0 : groggy ? 0.5 : 1;
-    const shots = p.update(dt, canAct ? input : { ...input, left: false }, canAct && altPressed(), recoilMul, heatMul, this.sfx, this.fx, altRecoilMul);
+    const altHeld = canAct && (input.right || input.keys.has('Space') || input.keys.has('ShiftLeft'));
+    const shots = p.update(dt, canAct ? input : { ...input, left: false }, canAct && altPressed(), recoilMul, heatMul, this.sfx, this.fx, altRecoilMul, altHeld);
     for (const s of shots) this.spawnShot(s);
+
+    this.updateHook(dt);
 
     // 보스
     if (!b.hidden) b.update(dt, this);
@@ -270,10 +275,60 @@ export class Game {
       this.fireBeam(s);
       return;
     }
+    if (s.kind === 'hook') {
+      this.hook = { x: s.x, y: s.y, vx: Math.cos(s.a) * s.speed, vy: Math.sin(s.a) * s.speed, dist: 0, range: s.range,
+        damage: s.damage, stagger: s.stagger, pullSpeed: s.pullSpeed };
+      return;
+    }
     this.bullets.push({
       x: s.x, y: s.y, vx: Math.cos(s.a) * s.speed, vy: Math.sin(s.a) * s.speed,
-      life: s.life, damage: s.damage, stagger: s.stagger, size: s.size, kind: s.kind, heavy: s.heavy,
+      life: s.life, max: s.life, damage: s.damage, stagger: s.stagger, size: s.size, kind: s.kind, heavy: s.heavy,
+      bounce: s.bounce || 0,
     });
+  }
+
+  // 앵커 건 갈고리: 날아가다 보스·벽·바닥·천장에 박히면 플레이어를 당김
+  updateHook(dt) {
+    const h = this.hook;
+    const p = this.player;
+    if (!h) return;
+    const ox = h.x, oy = h.y;
+    h.x += h.vx * dt;
+    h.y += h.vy * dt;
+    h.dist += Math.hypot(h.vx, h.vy) * dt;
+    const b = this.boss;
+    let attach = null;
+    if (!b.hidden && !b.dead && segCircle(ox, oy, h.x, h.y, b.x, b.y, b.r)) {
+      b.takeDamage(h.damage, h.stagger, h.x, h.y, this);
+      attach = { x: h.x, y: h.y };
+      this.sfx.bigHit();
+    } else {
+      for (const tg of this.targets) {
+        if (!tg.dead && segCircle(ox, oy, h.x, h.y, tg.x, tg.y, tg.r)) {
+          this.hitTarget(tg, h.damage);
+          attach = { x: h.x, y: h.y };
+          break;
+        }
+      }
+    }
+    if (!attach && (h.x <= ARENA.left || h.x >= ARENA.right || h.y <= ARENA.top || h.y >= ARENA.floor)) {
+      attach = {
+        x: Math.max(ARENA.left + 4, Math.min(ARENA.right - 4, h.x)),
+        y: Math.max(ARENA.top + 4, Math.min(ARENA.floor - 4, h.y)),
+      };
+    }
+    if (attach) {
+      this.hook = null;
+      this.hookPoint = { x: attach.x, y: attach.y, t: 0 };
+      p.startPull(attach.x, attach.y, h.pullSpeed);
+      this.sfx.latch();
+      this.fx.spark(attach.x, attach.y, Math.atan2(-h.vy, -h.vx), 10, '#ffe6b0', 500, 0.8, 0.25);
+      this.fx.ring(attach.x, attach.y, 4, 30, 0.2, '240,200,130', 4);
+    } else if (h.dist > h.range) {
+      // 빗나감
+      this.hook = null;
+      p.hookOut = false;
+    }
   }
 
   fireBeam(s) {
@@ -360,6 +415,16 @@ export class Game {
         }
       }
       if (bl.life <= 0) continue;
+      if (bl.bounce > 0 && (bl.x < ARENA.left || bl.x > ARENA.right || bl.y < ARENA.top || bl.y > ARENA.floor)) {
+        if (bl.x < ARENA.left || bl.x > ARENA.right) bl.vx = -bl.vx;
+        if (bl.y < ARENA.top || bl.y > ARENA.floor) bl.vy = -bl.vy;
+        bl.x = Math.max(ARENA.left, Math.min(ARENA.right, bl.x));
+        bl.y = Math.max(ARENA.top, Math.min(ARENA.floor, bl.y));
+        bl.bounce--;
+        bl.life = Math.max(bl.life, 0.25);
+        this.fx.spark(bl.x, bl.y, Math.atan2(bl.vy, bl.vx), 3, '#ffe6b0', 300, 0.5, 0.15);
+        continue;
+      }
       if (bl.x < ARENA.left || bl.x > ARENA.right || bl.y < ARENA.top || bl.y > ARENA.floor) {
         bl.life = 0;
         const nx = Math.max(ARENA.left, Math.min(ARENA.right, bl.x));
@@ -404,6 +469,12 @@ export class Game {
     // 플레이어 탄
     g.globalCompositeOperation = 'lighter';
     for (const bl of this.bullets) {
+      if (bl.kind === 'flame') {
+        const k = 1 - bl.life / bl.max;
+        g.fillStyle = `rgba(255,${Math.round(200 - k * 110)},${Math.round(120 - k * 40)},${0.55 * (1 - k)})`;
+        g.beginPath(); g.arc(bl.x, bl.y, 6 + k * 16, 0, Math.PI * 2); g.fill();
+        continue;
+      }
       const len = bl.heavy ? 0.03 : 0.018;
       g.strokeStyle = bl.kind === 'pellet' ? 'rgba(255,220,170,0.95)' : 'rgba(255,225,160,0.95)';
       g.lineWidth = bl.size;
@@ -434,6 +505,7 @@ export class Game {
       g.beginPath(); g.arc(p.x, p.y - 6, 70, 0, Math.PI * 2); g.fill();
       g.globalCompositeOperation = 'source-over';
     }
+    this.drawHook(g);
     if (!this.player.dead || Math.floor(t * 10) % 2 === 0) this.player.draw(g, t);
 
     this.fx.drawWorld(g);
@@ -467,6 +539,31 @@ export class Game {
     }
   }
 
+  drawHook(g) {
+    const p = this.player;
+    let tx = null, ty = null;
+    if (this.hook) { tx = this.hook.x; ty = this.hook.y; }
+    else if (p.pull) { tx = p.pull.x; ty = p.pull.y; }
+    if (tx === null) return;
+    const mp = p.muzzlePos();
+    g.strokeStyle = '#2a1a22';
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(mp.x, mp.y); g.lineTo(tx, ty); g.stroke();
+    g.strokeStyle = '#d8b066';
+    g.lineWidth = 1.5;
+    g.setLineDash([6, 5]);
+    g.beginPath(); g.moveTo(mp.x, mp.y); g.lineTo(tx, ty); g.stroke();
+    g.setLineDash([]);
+    // 갈고리 머리
+    const a = Math.atan2(ty - mp.y, tx - mp.x);
+    g.save();
+    g.translate(tx, ty);
+    g.rotate(a);
+    g.fillStyle = '#e8c88a';
+    g.beginPath(); g.moveTo(8, 0); g.lineTo(-6, -7); g.lineTo(-3, 0); g.lineTo(-6, 7); g.closePath(); g.fill();
+    g.restore();
+  }
+
   drawHud(g, t) {
     const b = this.boss;
     const p = this.player;
@@ -485,7 +582,7 @@ export class Game {
 
     // 키 안내 (항상 오른쪽 위)
     g.font = '500 13px "Noto Sans KR", sans-serif';
-    const keys = [['좌클릭', '연사'], ['우클릭 / Space', '산탄 (반동 이동)'], ['F', '극딜 (게이지 가득)'], ['R', '재시작'], ['Esc', '일시정지']];
+    const keys = [['좌클릭', '연사'], ['우클릭 / Space', '보조무기 (이동)'], ['F', '극딜 (게이지 가득)'], ['R', '재시작'], ['Esc', '일시정지']];
     let ky = this.mode === 'boss' ? 78 : 50;
     for (const [k, v] of keys) {
       g.fillStyle = 'rgba(16,6,16,0.55)';
@@ -615,14 +712,25 @@ export class Game {
     g.fillRect(px + 30, py - 2, 300 * p.heat, 8);
 
     g.fillStyle = '#e9e2d6';
-    g.fillText('산탄', px, py + 30);
-    for (let i = 0; i < p.aDef.shells; i++) {
-      g.fillStyle = i < p.shells ? '#e8c88a' : '#2b2b2f';
-      g.fillRect(px + 40 + i * 22, py + 16, 16, 18);
+    let wx;
+    if (p.aDef.mode === 'jet') {
+      g.fillText('연료', px, py + 30);
+      g.fillStyle = '#1c0e1a';
+      g.fillRect(px + 40, py + 20, 120, 10);
+      g.fillStyle = p.fuel > 0.25 ? '#e8c88a' : '#ff4d7e';
+      g.fillRect(px + 40, py + 20, 120 * p.fuel, 10);
+      wx = px + 170;
+    } else {
+      g.fillText('보조', px, py + 30);
+      for (let i = 0; i < p.aDef.shells; i++) {
+        g.fillStyle = i < p.shells ? '#e8c88a' : '#2b2b2f';
+        g.fillRect(px + 40 + i * 22, py + 16, 16, 18);
+      }
+      wx = px + 40 + p.aDef.shells * 22 + 8;
     }
-    g.font = font(600, 12);
-    g.fillStyle = '#8f8a80';
-    g.fillText(`${weaponDef(p.primary).name} / ${weaponDef(p.alt).name}`, px + 40 + p.aDef.shells * 22 + 8, py + 30);
+    g.font = '500 12px "Noto Sans KR", sans-serif';
+    g.fillStyle = '#a89aa4';
+    g.fillText(`${weaponDef(p.primary).name} / ${weaponDef(p.alt).name}`, wx, py + 30);
 
     // 극딜 게이지
     const t = performance.now() / 1000;
@@ -702,11 +810,18 @@ export class Game {
       g.arc(x, y, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p.heat);
       g.stroke();
     }
-    // 산탄 점
-    const n = p.aDef.shells;
-    for (let i = 0; i < n; i++) {
-      g.fillStyle = i < p.shells ? '#e8c88a' : 'rgba(80,80,86,0.8)';
-      g.fillRect(x - (n * 10) / 2 + i * 10 + 1, y + 30, 7, 7);
+    // 산탄 점 / 연료
+    if (p.aDef.mode === 'jet') {
+      g.fillStyle = 'rgba(80,80,86,0.8)';
+      g.fillRect(x - 20, y + 31, 40, 4);
+      g.fillStyle = p.fuel > 0.25 ? '#e8c88a' : '#ff4d7e';
+      g.fillRect(x - 20, y + 31, 40 * p.fuel, 4);
+    } else {
+      const n = p.aDef.shells;
+      for (let i = 0; i < n; i++) {
+        g.fillStyle = i < p.shells ? '#e8c88a' : 'rgba(80,80,86,0.8)';
+        g.fillRect(x - (n * 10) / 2 + i * 10 + 1, y + 30, 7, 7);
+      }
     }
     if (this.ult >= 100 && this.ultT <= 0) {
       g.font = '700 13px "Cinzel", "Noto Serif KR", serif';
@@ -715,7 +830,7 @@ export class Game {
       g.fillText('F', x + 28, y - 18);
     }
     // 반동 방향 미리보기 (산탄을 쏘면 튕겨 나갈 방향)
-    const a = p.aim + Math.PI;
+    const a = p.aDef.mode === 'anchor' ? p.aim : p.aim + Math.PI;
     g.strokeStyle = 'rgba(240,200,130,0.35)';
     g.lineWidth = 2;
     g.setLineDash([6, 6]);

@@ -36,6 +36,19 @@ export class Player {
     this.scarf = Array.from({ length: 6 }, () => ({ x: this.x, y: this.y }));
     this.squash = 0;
     this.ultActive = false;
+    this.fuel = 1;           // 분사기 연료
+    this.jetting = false;
+    this.jetTick = 0;
+    this.pull = null;        // 앵커 건 당기기 { x, y, t, speed }
+    this.hookOut = false;
+    this.bounceT = 0;        // 리바운더 튕김 상태
+  }
+
+  startPull(x, y, speed) {
+    this.pull = { x, y, t: 0, speed };
+    this.hookOut = false;
+    this.grounded = false;
+    this.groundTime = 0;
   }
 
   get alive() { return !this.dead; }
@@ -46,7 +59,7 @@ export class Player {
   }
 
   // 반환값: 발사한 탄 목록 (game에서 처리)
-  update(dt, input, altPressed, recoilMul, heatMul, sfx, fx, altRecoilMul = 1) {
+  update(dt, input, altPressed, recoilMul, heatMul, sfx, fx, altRecoilMul = 1, altHeld = false) {
     const shots = [];
     this.aim = Math.atan2(input.my - (this.y - 4), input.mx - this.x);
     this.face = Math.cos(this.aim) >= 0 ? 1 : -1;
@@ -58,6 +71,8 @@ export class Player {
     this.altMuzzle = Math.max(0, this.altMuzzle - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.squash = Math.max(0, this.squash - dt * 4);
+    this.bounceT = Math.max(0, this.bounceT - dt);
+    this.jetting = false;
 
     // 과열 처리 (극딜 중에는 과열 없음)
     if (this.ultActive) { this.heat = 0; this.overheat = false; }
@@ -97,9 +112,54 @@ export class Player {
         if (p.recoil > 200) fx.shake(p.recoil / 90);
       }
 
-      // 우클릭: 산탄 (이동 핵심)
-      if (altPressed && this.altCd <= 0) {
-        const a2 = this.aDef;
+      // 우클릭: 보조무기 (이동 핵심) — 무기마다 이동 방식이 다름
+      const a2 = this.aDef;
+      if (a2.mode === 'jet') {
+        // 분사기: 누르고 있는 동안 계속 밀려남
+        if (altHeld && (this.fuel > 0 || this.ultActive)) {
+          this.jetting = true;
+          if (!this.ultActive) this.fuel = Math.max(0, this.fuel - a2.drain * dt);
+          this.vx -= dir.x * a2.thrust * altRecoilMul * dt;
+          this.vy -= dir.y * a2.thrust * altRecoilMul * dt;
+          if (this.vy < -60 || this.vx !== 0) this.grounded = false;
+          this.groundTime = 0;
+          this.jetTick -= dt;
+          if (this.jetTick <= 0) {
+            this.jetTick = a2.tick;
+            const mp = this.muzzlePos();
+            shots.push({
+              kind: 'flame', x: mp.x, y: mp.y, a: this.aim + (Math.random() - 0.5) * a2.spread * 2,
+              speed: a2.speed * (0.8 + Math.random() * 0.4), damage: a2.damage * amul,
+              stagger: a2.stagger, size: 6, life: a2.life, heavy: false,
+            });
+            sfx.jet();
+            fx.spark(mp.x, mp.y, this.aim + (Math.random() - 0.5) * 0.4, 3, '#ffcf86', 500, 0.3, 0.18);
+            fx.smoke(this.x - dir.x * 10, this.y - dir.y * 10, 1, '120,80,90', 10, 0.4);
+          }
+          this.altMuzzle = 0.05;
+        }
+      } else if (a2.mode === 'anchor' && altPressed && this.altCd <= 0) {
+        if (this.pull) {
+          // 당기는 중 다시 누르면 놓음
+          this.pull = null;
+          this.altCd = 0.12;
+        } else if ((this.shells > 0 || this.ultActive) && !this.hookOut) {
+          if (!this.ultActive) this.shells--;
+          this.altCd = 0.18;
+          this.hookOut = true;
+          const mp = this.muzzlePos();
+          shots.push({
+            kind: 'hook', x: mp.x, y: mp.y, a: this.aim, speed: a2.speed, range: a2.range,
+            damage: a2.damage * amul, stagger: a2.stagger, pullSpeed: a2.pullSpeed,
+          });
+          this.altMuzzle = 0.07;
+          sfx.hook();
+          fx.spark(mp.x, mp.y, this.aim, 8, '#ffe6b0', 500, 0.3, 0.15);
+        } else if (!this.hookOut) {
+          this.altCd = 0.12;
+          sfx.empty();
+        }
+      } else if (a2.mode === 'blast' && altPressed && this.altCd <= 0) {
         if (this.shells > 0 || this.ultActive) {
           if (!this.ultActive) this.shells--;
           this.altCd = this.ultActive ? ULT.altCd : 0.16;
@@ -110,6 +170,7 @@ export class Player {
               kind: 'pellet', x: mp.x, y: mp.y, a: this.aim + spread,
               speed: a2.speed * (0.9 + Math.random() * 0.2), damage: a2.damage * amul,
               stagger: a2.stagger, size: a2.pellets === 1 ? 7 : 3.5, life: a2.life, heavy: a2.pellets === 1,
+              bounce: a2.bulletBounce || 0,
             });
           }
           // 기존 속도를 줄이고 반대 방향으로 강하게 튕김
@@ -117,6 +178,7 @@ export class Player {
           this.vx = this.vx * keep - dir.x * a2.recoil * altRecoilMul;
           this.vy = this.vy * keep - dir.y * a2.recoil * altRecoilMul;
           this.altMuzzle = 0.09;
+          if (a2.bounceTime) this.bounceT = a2.bounceTime;
           this.grounded = false;
           this.groundTime = 0;
           (this.alt.id === 'slug' ? sfx.slug : sfx.blast)();
@@ -132,8 +194,25 @@ export class Player {
     }
 
     // 물리
-    this.vy += PHYS.gravity * dt;
-    const drag = this.grounded ? PHYS.groundFriction : PHYS.airDrag;
+    if (this.pull) {
+      // 갈고리 지점으로 끌려감 (중력 무시)
+      const pl = this.pull;
+      pl.t += dt;
+      const dx = pl.x - this.x, dy = pl.y - this.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d < 34 || pl.t > 0.75 || this.dead) {
+        this.vx *= 0.55; this.vy *= 0.55;
+        this.pull = null;
+      } else {
+        this.vx = (dx / d) * pl.speed;
+        this.vy = (dy / d) * pl.speed;
+      }
+    } else {
+      this.vy += PHYS.gravity * dt;
+    }
+    const bouncy = this.bounceT > 0;
+    const wallB = bouncy ? 0.9 : PHYS.wallBounce;
+    const drag = this.grounded && !bouncy ? PHYS.groundFriction : PHYS.airDrag;
     this.vx *= Math.max(0, 1 - drag * dt);
     if (!this.grounded) this.vy *= Math.max(0, 1 - PHYS.airDrag * 0.5 * dt);
     const sp = Math.hypot(this.vx, this.vy);
@@ -143,14 +222,21 @@ export class Player {
     this.y += this.vy * dt;
 
     // 벽·천장·바닥 충돌
-    if (this.x < ARENA.left + this.r) { this.x = ARENA.left + this.r; this.vx = Math.abs(this.vx) * PHYS.wallBounce; }
-    if (this.x > ARENA.right - this.r) { this.x = ARENA.right - this.r; this.vx = -Math.abs(this.vx) * PHYS.wallBounce; }
-    if (this.y < ARENA.top + this.r) { this.y = ARENA.top + this.r; this.vy = Math.abs(this.vy) * PHYS.wallBounce; }
+    if (this.x < ARENA.left + this.r) { this.x = ARENA.left + this.r; this.vx = Math.abs(this.vx) * wallB; if (this.pull) this.pull = null; if (bouncy) fx.ring(this.x, this.y, 6, 40, 0.2, '255,214,150', 4); }
+    if (this.x > ARENA.right - this.r) { this.x = ARENA.right - this.r; this.vx = -Math.abs(this.vx) * wallB; if (this.pull) this.pull = null; if (bouncy) fx.ring(this.x, this.y, 6, 40, 0.2, '255,214,150', 4); }
+    if (this.y < ARENA.top + this.r) { this.y = ARENA.top + this.r; this.vy = Math.abs(this.vy) * wallB; if (this.pull) this.pull = null; }
 
     const wasGrounded = this.grounded;
     if (this.y >= ARENA.floor - this.r) {
       this.y = ARENA.floor - this.r;
-      if (this.vy > 260) {
+      if (this.pull) this.pull = null;
+      if (bouncy && this.vy > 80) {
+        this.vy = -this.vy * 0.85;
+        this.grounded = false;
+        sfx.land();
+        this.squash = 1;
+        fx.ring(this.x, ARENA.floor, 6, 50, 0.2, '255,214,150', 4);
+      } else if (this.vy > 260) {
         this.vy = -this.vy * PHYS.floorBounce;
         if (!wasGrounded) { sfx.land(); this.squash = 1; fx.smoke(this.x, ARENA.floor - 4, 3, '84,60,78', 10, 0.4); }
         this.grounded = false;
@@ -162,8 +248,15 @@ export class Player {
       this.grounded = false;
     }
 
+    // 분사기 연료 충전
+    if (this.aDef.mode === 'jet') {
+      if (!this.jetting) this.fuel = Math.min(1, this.fuel + (this.grounded ? 2.5 : 0.12) * dt);
+    }
+
     // 산탄 충전
-    if (this.grounded) {
+    if (this.aDef.mode === 'jet') {
+      // 연료식이라 탄 충전 없음
+    } else if (this.grounded) {
       this.groundTime += dt;
       if (this.groundTime >= PLAYER.shellRefillGround && this.shells < this.aDef.shells) {
         this.shells = this.aDef.shells;
