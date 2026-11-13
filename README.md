@@ -1,5 +1,7 @@
 # BACKBLAST
 
+https://rak-kr.github.io/backblast/
+
 반동으로만 움직이는 2D 보스전 (시연판 · 보스 1종)
 
 - 좌클릭: 주무기 연사 (작은 반동, 과열)
